@@ -31,10 +31,28 @@ public partial class MainWindow
     private void UpdateStatusBar()
     {
         var tab = GetActiveTab();
+        WordWrapCheckGlyph.Opacity = tab?.WordWrapEnabled == true ? 0.85 : 0;
+        StatusBarCheckGlyph.Opacity = _statusBarVisible ? 0.85 : 0;
 
-        var lineIndex = EditorTextBox.GetLineIndexFromCharacterIndex(EditorTextBox.CaretIndex);
-        var lineStart = EditorTextBox.GetCharacterIndexFromLineIndex(lineIndex);
-        var column = EditorTextBox.CaretIndex - lineStart + 1;
+        if (_themeMode == AppThemeMode.Light)
+        {
+            LightThemeGlyph.Opacity = 0.85;
+            DarkThemeGlyph.Opacity = 0;
+        }
+        else
+        {
+            LightThemeGlyph.Opacity = 0;
+            DarkThemeGlyph.Opacity = 0.85;
+        }
+
+        var document = EditorTextBox.Document;
+        var documentLength = document?.TextLength ?? 0;
+        var caretOffset = Math.Clamp(EditorTextBox.CaretOffset, 0, documentLength);
+        var line = document is null
+            ? null
+            : document.GetLineByOffset(documentLength == 0 ? 0 : caretOffset);
+        var lineIndex = Math.Max(0, (line?.LineNumber ?? 1) - 1);
+        var column = line is null ? 1 : caretOffset - line.Offset + 1;
 
         CaretText.Text = $"Ln {Math.Max(1, lineIndex + 1):N0}, Col {Math.Max(1, column):N0}";
 
@@ -50,31 +68,24 @@ public partial class MainWindow
             SelectionDivider.Visibility = Visibility.Collapsed;
         }
 
-        LineEndingText.Text = tab?.LineEndingLabel ?? DetectLineEnding(EditorTextBox.Text);
+        LineEndingText.Text = tab?.LineEndingLabel ?? "Windows (CRLF)";
         EncodingText.Text = tab?.EncodingLabel ?? "UTF-8";
-
-        WordWrapCheckGlyph.Opacity = tab?.WordWrapEnabled == true ? 0.85 : 0;
-        StatusBarCheckGlyph.Opacity = _statusBarVisible ? 0.85 : 0;
-
-        if (_themeMode == AppThemeMode.Light)
-        {
-            LightThemeGlyph.Opacity = 0.85;
-            DarkThemeGlyph.Opacity = 0;
-        }
-        else
-        {
-            LightThemeGlyph.Opacity = 0;
-            DarkThemeGlyph.Opacity = 0.85;
-        }
 
         UpdateZoomStatus();
     }
 
     private void ConfigureWordWrap()
     {
-        var enabled = GetActiveTab()?.WordWrapEnabled == true;
-        EditorTextBox.TextWrapping = enabled ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        var tab = GetActiveTab();
+        var enabled = tab?.WordWrapEnabled == true;
+        if (enabled && (tab?.IsLoading == true || (tab?.LoadedCharacterCount ?? 0) > WordWrapSoftLimitCharacters))
+        {
+            enabled = false;
+        }
+
+        EditorTextBox.WordWrap = enabled;
         EditorTextBox.HorizontalScrollBarVisibility = enabled ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        DocumentViewportControl.WrapText = enabled;
     }
 
     private void UpdateWindowButtons()
@@ -86,6 +97,7 @@ public partial class MainWindow
     {
         var percent = EditorTextBox.FontSize / DefaultEditorFontSize * 100;
         ZoomText.Text = $"{percent:N0}%";
+        DocumentViewportControl.EditorFontSize = EditorTextBox.FontSize;
     }
 
     private void ZoomBy(int delta)
@@ -97,9 +109,9 @@ public partial class MainWindow
 
     private void InsertTextAtCaret(string value)
     {
-        var index = EditorTextBox.CaretIndex;
-        EditorTextBox.Text = EditorTextBox.Text.Insert(index, value);
-        EditorTextBox.CaretIndex = index + value.Length;
+        var index = EditorTextBox.CaretOffset;
+        EditorTextBox.Document.Insert(index, value);
+        EditorTextBox.CaretOffset = index + value.Length;
     }
 
     private void CloseMenus()
@@ -211,6 +223,18 @@ public partial class MainWindow
     private void PrintMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         FileMenuPopup.IsOpen = false;
+        var documentLength = EditorTextBox.Document?.TextLength ?? 0;
+        if (documentLength > PrintSoftLimitCharacters)
+        {
+            MessageBox.Show(
+                this,
+                "Printing is disabled for very large files because the WPF print document can freeze or crash the app.",
+                "Notepad",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
         var printDialog = new PrintDialog();
         if (printDialog.ShowDialog() == true)
         {
@@ -351,6 +375,7 @@ public partial class MainWindow
             EditorTextBox.FontStyle = dialog.SelectedFontStyle;
             EditorTextBox.FontWeight = dialog.SelectedFontWeight;
             EditorTextBox.FontSize = dialog.SelectedFontSize;
+            EditorTextBox.TextArea.TextView.InvalidateVisual();
             _editorFontFamily = dialog.SelectedFontFamily;
             _editorFontStyle = dialog.SelectedFontStyle;
             _editorFontWeight = dialog.SelectedFontWeight;

@@ -142,13 +142,14 @@ public partial class MainWindow
         foreach (var tab in _tabs)
         {
             CancelLoad(tab);
+            ReleaseVirtualDocument(tab);
         }
 
         _statusRefreshTimer.Stop();
         base.OnClosing(e);
     }
 
-    private void EditorTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    private void EditorTextBox_OnTextChanged(object? sender, EventArgs e)
     {
         if (_isInternalUpdate)
         {
@@ -162,27 +163,26 @@ public partial class MainWindow
         }
 
         var wasDirty = tab.IsDirty;
-        tab.Text = EditorTextBox.Text;
         tab.IsDirty = true;
         tab.Title = string.IsNullOrWhiteSpace(tab.Path) ? "Untitled" : Path.GetFileName(tab.Path);
-        tab.LoadedCharacterCount = tab.Text.Length;
-        tab.LoadedLineCount = CountVisibleLines(tab.Text);
-        tab.LineEndingLabel = DetectLineEnding(tab.Text);
+        tab.LoadedCharacterCount = EditorTextBox.Document?.TextLength ?? 0;
+        tab.LoadedLineCount = EditorTextBox.Document?.LineCount ?? 1;
 
         if (!wasDirty)
         {
             RenderTabs();
         }
 
-        RefreshActiveTabUi();
+        UpdateTitle();
+        UpdateStatusBar();
 
         if (FindPanel.Visibility == Visibility.Visible)
         {
-            RefreshHighlightAll();
+            UpdateMatchCountLabel();
         }
     }
 
-    private void EditorTextBox_OnSelectionChanged(object sender, RoutedEventArgs e)
+    private void EditorTextBox_OnSelectionChanged(object? sender, EventArgs e)
     {
         var tab = GetActiveTab();
         if (tab is null || tab.IsLoading)
@@ -190,7 +190,7 @@ public partial class MainWindow
             return;
         }
 
-        tab.CaretIndex = EditorTextBox.CaretIndex;
+        tab.CaretIndex = EditorTextBox.CaretOffset;
         tab.SelectionStart = EditorTextBox.SelectionStart;
         tab.SelectionLength = EditorTextBox.SelectionLength;
         UpdateStatusBar();
@@ -265,7 +265,6 @@ public partial class MainWindow
                 case Button:
                 case TextBox:
                 case ScrollViewer:
-                case StackPanel { Name: "TabStripPanel" }:
                     return true;
             }
 

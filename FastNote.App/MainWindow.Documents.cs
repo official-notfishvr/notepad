@@ -1,17 +1,19 @@
+using ICSharpCode.AvalonEdit.Document;
 using Microsoft.Win32;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Threading;
 
 namespace FastNote.App;
 
 public partial class MainWindow
 {
-    private const int StreamChunkChars = 32 * 1024;
     private const int ReadBufferChars = 256 * 1024;
+    private const int UiAppendChunkChars = 6 * 1024 * 1024;
+    private static readonly TimeSpan UiFlushInterval = TimeSpan.FromMilliseconds(650);
 
     public async Task OpenFileAsync(string path)
     {
@@ -32,6 +34,7 @@ public partial class MainWindow
     private async Task StartLoadingIntoTabAsync(DocumentTab tab, string path)
     {
         CancelLoad(tab);
+        ReleaseVirtualDocument(tab);
         ResetTabForLoad(tab, path);
 
         if (GetActiveTab()?.Id == tab.Id)
@@ -45,7 +48,7 @@ public partial class MainWindow
 
         try
         {
-            await LoadTabAsync(tab, path, loadVersion, tokenSource.Token);
+            await StreamFileIntoEditorAsync(tab, path, loadVersion, tokenSource.Token);
         }
         catch (OperationCanceledException)
         {
@@ -55,12 +58,9 @@ public partial class MainWindow
                 tab.LoadingLabel = string.Empty;
                 if (GetActiveTab()?.Id == tab.Id)
                 {
-                    _isInternalUpdate = true;
-                    EditorTextBox.Text = string.Empty;
-                    _isInternalUpdate = false;
-                    EditorTextBox.IsReadOnly = false;
                     UpdateLoadingUi();
                 }
+
                 RenderTabs();
             }
         }
@@ -71,10 +71,6 @@ public partial class MainWindow
 
             if (GetActiveTab()?.Id == tab.Id)
             {
-                _isInternalUpdate = true;
-                EditorTextBox.Text = string.Empty;
-                _isInternalUpdate = false;
-                EditorTextBox.IsReadOnly = false;
                 MessageBox.Show(this, ex.Message, "Notepad", MessageBoxButton.OK, MessageBoxImage.Error);
                 RefreshActiveTabUi();
             }
@@ -92,109 +88,96 @@ public partial class MainWindow
         }
     }
 
-    private async Task LoadTabAsync(DocumentTab tab, string path, int loadVersion, CancellationToken cancellationToken)
+    private async Task StreamFileIntoEditorAsync(DocumentTab tab, string path, int loadVersion, CancellationToken cancellationToken)
     {
-        var tabId = tab.Id;
+        using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.ReadWrite | FileShare.Delete,
+            bufferSize: 1024 * 1024,
+            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        var (fullContent, encoding, sawCrLf, sawCr, sawLf) = await Task.Run(() =>
+        using var reader = new StreamReader(
+            stream,
+            Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true,
+            bufferSize: 1024 * 1024,
+            leaveOpen: true);
+
+        var fileLength = stream.Length;
+        var charBuffer = new char[ReadBufferChars];
+        var active = GetActiveTab()?.Id == tab.Id;
+        var pendingUiChunk = new StringBuilder(UiAppendChunkChars);
+        StringBuilder? fullTextBuilder = active
+            ? null
+            : new StringBuilder((int)Math.Min(Math.Max(4096L, fileLength), 4L * 1024 * 1024));
+        var sawCrLf = false;
+        var sawCr = false;
+        var sawLf = false;
+        var previousEndedWithCr = false;
+        var flushStopwatch = Stopwatch.StartNew();
+
+        tab.IsLoading = true;
+        tab.IsEditorBacked = true;
+        tab.IsViewportBacked = false;
+        tab.Text = string.Empty;
+        tab.IsTextCacheReady = true;
+        tab.IsHydratingText = false;
+        tab.AutoActivateEditorWhenReady = false;
+        tab.LoadedCharacterCount = 0;
+        tab.LoadedLineCount = 1;
+        tab.StreamedToEditorCharacterCount = 0;
+
+        if (active)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            using var stream = new FileStream(
-                path,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Delete,
-                bufferSize: 1024 * 1024);
-
-            using var reader = new StreamReader(
-                stream,
-                Encoding.UTF8,
-                detectEncodingFromByteOrderMarks: true,
-                bufferSize: 1024 * 1024,
-                leaveOpen: true);
-
-            var fileLength = stream.Length;
-            var capacity = (int)Math.Min(Math.Max(4096L, fileLength), 512L * 1024 * 1024);
-            var sb = new StringBuilder(capacity);
-            var charBuf = new char[ReadBufferChars];
-            var sawCrLfL = false;
-            var sawCrL = false;
-            var sawLfL = false;
-            var prevCr = false;
-
-            while (true)
+            SetEditorTextFast(string.Empty);
+            EditorTextBox.IsReadOnly = false;
+            if (EditorTextBox.Document is not null)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                var read = reader.Read(charBuf, 0, charBuf.Length);
-                if (read <= 0)
-                {
-                    break;
-                }
-
-                sb.Append(charBuf, 0, read);
-                TrackLineEndings(charBuf, read, ref sawCrLfL, ref sawCrL, ref sawLfL, ref prevCr);
+                EditorTextBox.Document.UndoStack.SizeLimit = 0;
             }
 
-            return (sb.ToString(), reader.CurrentEncoding, sawCrLfL, sawCrL, sawLfL);
-        }, cancellationToken);
-
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (tab.LoadVersion != loadVersion)
-        {
-            return;
+            UpdateEditorSurface(tab);
+            ConfigureWordWrap();
+            UpdateLoadingUi();
         }
 
-        tab.IsEditorBacked = false;
-        tab.EncodingLabel = ToEncodingLabel(encoding);
-        tab.LineEndingLabel = DetectTrackedLineEnding(sawCrLf, sawCr, sawLf);
-        tab.LoadedCharacterCount = fullContent.Length;
-        tab.LoadedLineCount = 1;
-        tab.Text = string.Empty;
-
-        var totalChars = fullContent.Length;
-        var committed = 0;
-        var isActiveTab = GetActiveTab()?.Id == tabId;
-
-        if (isActiveTab)
-        {
-            _isInternalUpdate = true;
-            EditorTextBox.Text = string.Empty;
-            _isInternalUpdate = false;
-            EditorTextBox.IsReadOnly = true;
-        }
-
-        while (committed < totalChars)
+        while (true)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            var read = await reader.ReadAsync(charBuffer.AsMemory(0, charBuffer.Length), cancellationToken);
+            if (read <= 0)
+            {
+                break;
+            }
 
             if (tab.LoadVersion != loadVersion)
             {
                 return;
             }
 
-            var chunkSize = Math.Min(StreamChunkChars, totalChars - committed);
-            var chunk = fullContent.Substring(committed, chunkSize);
-            committed += chunkSize;
+            fullTextBuilder?.Append(charBuffer, 0, read);
+            pendingUiChunk.Append(charBuffer, 0, read);
+            TrackLineEndings(charBuffer, read, ref sawCrLf, ref sawCr, ref sawLf, ref previousEndedWithCr);
+            tab.LoadedCharacterCount += read;
+            tab.EncodingLabel = ToEncodingLabel(reader.CurrentEncoding);
 
-            var percent = committed * 100 / totalChars;
-            tab.LoadingLabel = $"Loading\u2026 {percent}%";
+            var shouldFlush =
+                pendingUiChunk.Length >= UiAppendChunkChars ||
+                flushStopwatch.Elapsed >= UiFlushInterval;
 
-            isActiveTab = GetActiveTab()?.Id == tabId;
-            if (isActiveTab)
+            if (!shouldFlush)
             {
-                _isInternalUpdate = true;
-                EditorTextBox.AppendText(chunk);
-                _isInternalUpdate = false;
-                tab.StreamedToEditorCharacterCount = committed;
-                tab.LoadedLineCount = EditorTextBox.LineCount;
-                UpdateLoadingUi();
+                continue;
             }
 
-            await Task.Yield();
+            await FlushEditorChunkAsync(tab, loadVersion, pendingUiChunk, fileLength, cancellationToken);
+            flushStopwatch.Restart();
         }
 
+        await FlushEditorChunkAsync(tab, loadVersion, pendingUiChunk, fileLength, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (tab.LoadVersion != loadVersion)
@@ -202,27 +185,112 @@ public partial class MainWindow
             return;
         }
 
-        tab.Text = fullContent;
         tab.IsLoading = false;
         tab.LoadingLabel = string.Empty;
-        tab.IsEditorBacked = true;
-        tab.LoadedCharacterCount = fullContent.Length;
-        tab.LoadedLineCount = CountVisibleLines(fullContent);
+        tab.LineEndingLabel = DetectTrackedLineEnding(sawCrLf, sawCr, sawLf);
 
-        isActiveTab = GetActiveTab()?.Id == tabId;
-        if (isActiveTab)
+        if (GetActiveTab()?.Id == tab.Id)
         {
-            EditorTextBox.IsReadOnly = false;
-            EditorTextBox.CaretIndex = 0;
-            tab.StreamedToEditorCharacterCount = fullContent.Length;
-            ConfigureWordWrap();
-            UpdateTitle();
+            if (EditorTextBox.Document is not null)
+            {
+                EditorTextBox.Document.UndoStack.SizeLimit = 1_024;
+            }
+
+            tab.LoadedCharacterCount = EditorTextBox.Document?.TextLength ?? 0;
+            tab.LoadedLineCount = EditorTextBox.Document?.LineCount ?? 1;
+            tab.StreamedToEditorCharacterCount = EditorTextBox.Document?.TextLength ?? 0;
             UpdateLoadingUi();
             UpdateStatusBar();
+        }
+        else
+        {
+            tab.Text = fullTextBuilder?.ToString() ?? string.Empty;
+            tab.LoadedCharacterCount = tab.Text.Length;
+            tab.LoadedLineCount = CountVisibleLines(tab.Text);
+            tab.StreamedToEditorCharacterCount = tab.Text.Length;
         }
 
         RenderTabs();
         TrimInactiveTabMemory();
+    }
+
+    private async Task FlushEditorChunkAsync(
+        DocumentTab tab,
+        int loadVersion,
+        StringBuilder pendingUiChunk,
+        long fileLength,
+        CancellationToken cancellationToken)
+    {
+        if (pendingUiChunk.Length == 0)
+        {
+            return;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        var chunk = pendingUiChunk.ToString();
+        pendingUiChunk.Clear();
+
+        if (tab.LoadVersion != loadVersion)
+        {
+            return;
+        }
+
+        var active = GetActiveTab()?.Id == tab.Id;
+        var percent = fileLength <= 0 ? 100 : Math.Min(100, (int)Math.Round(tab.LoadedCharacterCount * 100d / fileLength));
+        tab.LoadingLabel = $"Loading… {percent}%";
+
+        if (active)
+        {
+            AppendEditorChunkPreservingSelection(chunk);
+            tab.StreamedToEditorCharacterCount = EditorTextBox.Document?.TextLength ?? 0;
+            tab.LoadedLineCount = EditorTextBox.Document?.LineCount ?? 1;
+            UpdateLoadingUi();
+        }
+
+        await Task.Yield();
+    }
+
+    private void AppendEditorChunkPreservingSelection(string chunk)
+    {
+        var selectionStart = EditorTextBox.SelectionStart;
+        var selectionLength = EditorTextBox.SelectionLength;
+        var caretIndex = EditorTextBox.CaretOffset;
+        var restoreSelection = EditorTextBox.IsKeyboardFocusWithin;
+
+        _isInternalUpdate = true;
+        try
+        {
+            var document = EditorTextBox.Document ?? new TextDocument();
+            if (!ReferenceEquals(EditorTextBox.Document, document))
+            {
+                EditorTextBox.Document = document;
+            }
+
+            document.BeginUpdate();
+            try
+            {
+                document.Insert(document.TextLength, chunk);
+            }
+            finally
+            {
+                document.EndUpdate();
+            }
+        }
+        finally
+        {
+            _isInternalUpdate = false;
+        }
+
+        if (!restoreSelection)
+        {
+            return;
+        }
+
+        var safeLength = EditorTextBox.Document?.TextLength ?? 0;
+        var safeSelectionStart = Math.Min(selectionStart, safeLength);
+        var safeSelectionLength = Math.Min(selectionLength, safeLength - safeSelectionStart);
+        EditorTextBox.Select(safeSelectionStart, safeSelectionLength);
+        EditorTextBox.CaretOffset = Math.Min(caretIndex, safeLength);
     }
 
     private static void TrackLineEndings(char[] buffer, int count, ref bool sawCrLf, ref bool sawCr, ref bool sawLf, ref bool previousEndedWithCr)
@@ -262,15 +330,21 @@ public partial class MainWindow
         tab.Text = string.Empty;
         tab.IsDirty = false;
         tab.IsLoading = true;
-        tab.LoadingLabel = "Loading\u2026";
+        tab.LoadingLabel = "Loading…";
         tab.LoadedCharacterCount = 0;
-        tab.LoadedLineCount = 0;
+        tab.LoadedLineCount = 1;
         tab.CaretIndex = 0;
         tab.SelectionStart = 0;
         tab.SelectionLength = 0;
         tab.LastActivatedUtc = DateTime.UtcNow;
-        tab.IsEditorBacked = false;
+        tab.IsEditorBacked = true;
+        tab.IsViewportBacked = false;
         tab.StreamedToEditorCharacterCount = 0;
+        tab.EncodingLabel = "UTF-8";
+        tab.LineEndingLabel = "Windows (CRLF)";
+        tab.IsTextCacheReady = true;
+        tab.IsHydratingText = false;
+        tab.AutoActivateEditorWhenReady = false;
         CloseMenus();
         RenderTabs();
         UpdateTitle();
@@ -323,6 +397,14 @@ public partial class MainWindow
         }
 
         var enc = tab.LineEndingLabel.Contains("UTF-8 BOM") ? new UTF8Encoding(true) : new UTF8Encoding(false);
+        if (GetActiveTab()?.Id == tab.Id)
+        {
+            tab.Text = EditorTextBox.Text;
+            tab.LoadedCharacterCount = EditorTextBox.Document?.TextLength ?? tab.Text.Length;
+            tab.LoadedLineCount = EditorTextBox.Document?.LineCount ?? CountVisibleLines(tab.Text);
+            tab.LineEndingLabel = DetectLineEnding(tab.Text);
+        }
+
         await File.WriteAllTextAsync(path!, tab.Text, enc);
         tab.Path = path;
         tab.Title = Path.GetFileName(path);
@@ -339,12 +421,13 @@ public partial class MainWindow
         var tab = GetActiveTab();
         if (tab is null) return;
 
-        if (!tab.IsLoading)
+        if (!tab.IsViewportBacked)
         {
             tab.Text = EditorTextBox.Text;
-            tab.LoadedCharacterCount = tab.Text.Length;
-            tab.LoadedLineCount = CountVisibleLines(tab.Text);
-            tab.CaretIndex = EditorTextBox.CaretIndex;
+            tab.LoadedCharacterCount = EditorTextBox.Document?.TextLength ?? tab.Text.Length;
+            tab.LoadedLineCount = EditorTextBox.Document?.LineCount ?? CountVisibleLines(tab.Text);
+            tab.LineEndingLabel = DetectLineEnding(tab.Text);
+            tab.CaretIndex = EditorTextBox.CaretOffset;
             tab.SelectionStart = EditorTextBox.SelectionStart;
             tab.SelectionLength = EditorTextBox.SelectionLength;
         }
@@ -355,35 +438,23 @@ public partial class MainWindow
     private void PresentTab(DocumentTab tab, bool forceTextRefresh)
     {
         tab.LastActivatedUtc = DateTime.UtcNow;
+        UpdateEditorSurface(tab);
 
-        if (tab.IsLoading)
+        var displayText = tab.Text;
+        if (forceTextRefresh || EditorTextBox.Text != displayText)
         {
-            _isInternalUpdate = true;
-            EditorTextBox.Text = string.Empty;
-            _isInternalUpdate = false;
-            EditorTextBox.IsReadOnly = true;
-            tab.StreamedToEditorCharacterCount = 0;
+            SetEditorTextFast(displayText);
         }
-        else
-        {
-            var displayText = tab.Text;
-            if (forceTextRefresh || EditorTextBox.Text != displayText)
-            {
-                _isInternalUpdate = true;
-                EditorTextBox.Text = displayText;
-                _isInternalUpdate = false;
-            }
 
-            EditorTextBox.IsReadOnly = false;
-            tab.StreamedToEditorCharacterCount = displayText.Length;
+        EditorTextBox.IsReadOnly = false;
+        tab.StreamedToEditorCharacterCount = displayText.Length;
 
-            var safeLen = EditorTextBox.Text.Length;
-            var caretIndex = Math.Min(tab.CaretIndex, safeLen);
-            var selStart = Math.Min(tab.SelectionStart, safeLen);
-            var selLen = Math.Min(tab.SelectionLength, safeLen - selStart);
-            EditorTextBox.CaretIndex = caretIndex;
-            EditorTextBox.Select(selStart, selLen);
-        }
+        var safeLen = EditorTextBox.Document?.TextLength ?? 0;
+        var caretIndex = Math.Min(tab.CaretIndex, safeLen);
+        var selStart = Math.Min(tab.SelectionStart, safeLen);
+        var selLen = Math.Min(tab.SelectionLength, safeLen - selStart);
+        EditorTextBox.CaretOffset = caretIndex;
+        EditorTextBox.Select(selStart, selLen);
 
         ConfigureWordWrap();
         UpdateTitle();
@@ -392,11 +463,37 @@ public partial class MainWindow
         RenderTabs();
     }
 
+    private void UpdateEditorSurface(DocumentTab? tab)
+    {
+        DocumentViewportControl.Visibility = Visibility.Collapsed;
+        EditorTextBox.Visibility = Visibility.Visible;
+        if (DocumentViewportControl.Document is not null)
+        {
+            DocumentViewportControl.Document = null;
+        }
+    }
+
+    private void SetEditorTextFast(string value)
+    {
+        _isInternalUpdate = true;
+        var document = new TextDocument(value);
+        document.UndoStack.SizeLimit = 0;
+        try
+        {
+            EditorTextBox.Document = document;
+        }
+        finally
+        {
+            _isInternalUpdate = false;
+        }
+    }
+
     private void RefreshActiveTabUi()
     {
         var tab = GetActiveTab();
         if (tab is null) return;
 
+        UpdateEditorSurface(tab);
         UpdateLoadingUi();
         UpdateStatusBar();
         UpdateTitle();
@@ -496,6 +593,12 @@ public partial class MainWindow
         }
     }
 
+    private void ReleaseVirtualDocument(DocumentTab tab)
+    {
+        tab.VirtualDocument?.Dispose();
+        tab.VirtualDocument = null;
+    }
+
     private void RenderTabs()
     {
         TabStripPanel.Children.Clear();
@@ -576,6 +679,7 @@ public partial class MainWindow
         if (!await ConfirmDiscardChangesAsync(tab)) return;
 
         CancelLoad(tab);
+        ReleaseVirtualDocument(tab);
 
         var targetIndex = index == _activeTabIndex
             ? Math.Max(0, Math.Min(index, _tabs.Count - 2))
@@ -584,7 +688,7 @@ public partial class MainWindow
 
         if (_tabs.Count == 0)
         {
-            CreateNewTabAndActivate();
+            Close();
             return;
         }
 
@@ -615,6 +719,7 @@ public partial class MainWindow
         if (tab is null) return;
 
         CancelLoad(tab);
+        ReleaseVirtualDocument(tab);
         var replacement = CreateNewDocumentTab();
         var index = _tabs.IndexOf(tab);
         _tabs[index] = replacement;

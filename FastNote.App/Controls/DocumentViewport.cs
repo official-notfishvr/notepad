@@ -75,6 +75,11 @@ public sealed class DocumentViewport : FrameworkElement
         get => _document;
         set
         {
+            if (ReferenceEquals(_document, value))
+            {
+                return;
+            }
+
             if (_document is not null)
             {
                 _document.ProgressChanged -= DocumentOnProgressChanged;

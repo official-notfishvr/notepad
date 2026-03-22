@@ -1,3 +1,5 @@
+using ICSharpCode.AvalonEdit.Rendering;
+using ICSharpCode.AvalonEdit.Document;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -8,11 +10,16 @@ public partial class MainWindow : Window
 {
     private const double DefaultEditorFontSize = 14;
     private const int WordWrapSoftLimitCharacters = 2_000_000;
+    private const int LiveSearchSoftLimitCharacters = 1_000_000;
+    private const int MatchCountSoftLimitCharacters = 2_000_000;
+    private const int ReplaceAllSoftLimitCharacters = 4_000_000;
+    private const int PrintSoftLimitCharacters = 2_000_000;
     private const int TabRetentionLimit = 12;
 
     private readonly List<DocumentTab> _tabs = [];
     private readonly Dictionary<Guid, CancellationTokenSource> _loadTokens = [];
     private readonly DispatcherTimer _statusRefreshTimer;
+    private readonly SearchHighlightColorizer _searchHighlightColorizer;
 
     private AppThemeMode _themeMode = AppThemeMode.Dark;
     private bool _isInternalUpdate;
@@ -29,6 +36,20 @@ public partial class MainWindow : Window
         InitializeComponent();
         ApplyTheme(AppThemeMode.Dark);
         UpdateWindowButtons();
+        DocumentViewportControl.TopLineChanged += (_, _) => UpdateStatusBar();
+        DocumentViewportControl.EditorFontSize = DefaultEditorFontSize;
+        EditorTextBox.TextChanged += EditorTextBox_OnTextChanged;
+        EditorTextBox.TextArea.SelectionChanged += EditorTextBox_OnSelectionChanged;
+        EditorTextBox.TextArea.Caret.PositionChanged += (_, _) => EditorTextBox_OnSelectionChanged(EditorTextBox, EventArgs.Empty);
+        EditorTextBox.Document = new TextDocument();
+        EditorTextBox.Options.EnableHyperlinks = false;
+        EditorTextBox.Options.EnableEmailHyperlinks = false;
+        EditorTextBox.Options.EnableRectangularSelection = false;
+        EditorTextBox.Options.EnableTextDragDrop = false;
+        EditorTextBox.Options.HighlightCurrentLine = false;
+        EditorTextBox.Options.AllowScrollBelowDocument = false;
+        _searchHighlightColorizer = new SearchHighlightColorizer();
+        EditorTextBox.TextArea.TextView.LineTransformers.Add(_searchHighlightColorizer);
 
         _statusRefreshTimer = new DispatcherTimer(DispatcherPriority.Background)
         {

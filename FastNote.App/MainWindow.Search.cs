@@ -9,7 +9,15 @@ namespace FastNote.App;
 
 public partial class MainWindow
 {
-    private HighlightAllAdorner? _highlightAdorner;
+    private int GetEditorDocumentLength()
+    {
+        return EditorTextBox.Document?.TextLength ?? 0;
+    }
+
+    private bool IsDocumentOverLimit(int limit)
+    {
+        return GetEditorDocumentLength() > limit;
+    }
 
     private void FindNextInternal()
     {
@@ -82,7 +90,13 @@ public partial class MainWindow
     private void ScrollToMatchAndSelect(int index, int length)
     {
         EditorTextBox.Select(index, length);
-        EditorTextBox.ScrollToLine(EditorTextBox.GetLineIndexFromCharacterIndex(index));
+        var documentLength = GetEditorDocumentLength();
+        var line = EditorTextBox.Document?.GetLineByOffset(documentLength == 0 ? 0 : Math.Clamp(index, 0, documentLength));
+        if (line is not null)
+        {
+            EditorTextBox.ScrollToLine(line.LineNumber);
+        }
+
         ApplyFindHighlight();
         UpdateMatchCountLabel();
     }
@@ -210,48 +224,21 @@ public partial class MainWindow
 
     private void RefreshHighlightAll()
     {
-        if (HighlightAllCheckBox.IsChecked != true)
-        {
-            RemoveHighlightAdorner();
-            return;
-        }
-
-        var query = FindTextBox.Text;
-        if (string.IsNullOrEmpty(query))
-        {
-            RemoveHighlightAdorner();
-            return;
-        }
-
-        var matches = FindAllMatches(EditorTextBox.Text, query);
-        var layer = AdornerLayer.GetAdornerLayer(EditorTextBox);
-        if (layer is null)
-        {
-            return;
-        }
-
-        RemoveHighlightAdorner();
-
-        if (matches.Count == 0)
-        {
-            return;
-        }
-
-        var highlightBrush = GetResourceBrush("HighlightAllBrush", Color.FromArgb(0x55, 0xFF, 0xD7, 0x00));
-        _highlightAdorner = new HighlightAllAdorner(EditorTextBox, matches, highlightBrush);
-        layer.Add(_highlightAdorner);
+        _searchHighlightColorizer.IsEnabled = HighlightAllCheckBox.IsChecked == true && !string.IsNullOrEmpty(FindTextBox.Text);
+        _searchHighlightColorizer.Query = FindTextBox.Text;
+        _searchHighlightColorizer.UseRegex = UseRegexCheckBox.IsChecked == true;
+        _searchHighlightColorizer.MatchCase = MatchCaseCheckBox.IsChecked == true;
+        _searchHighlightColorizer.WholeWord = WholeWordCheckBox.IsChecked == true;
+        _searchHighlightColorizer.BackgroundBrush = GetResourceBrush("HighlightAllBrush", Color.FromArgb(0x55, 0xFF, 0xD7, 0x00));
+        _searchHighlightColorizer.ForegroundBrush = GetResourceBrush("EditorForegroundBrush", Colors.Black);
+        EditorTextBox.TextArea.TextView.Redraw();
+        UpdateMatchCountLabel();
     }
 
     private void RemoveHighlightAdorner()
     {
-        if (_highlightAdorner is null)
-        {
-            return;
-        }
-
-        var layer = AdornerLayer.GetAdornerLayer(EditorTextBox);
-        layer?.Remove(_highlightAdorner);
-        _highlightAdorner = null;
+        _searchHighlightColorizer.IsEnabled = false;
+        EditorTextBox.TextArea.TextView.Redraw();
     }
 
     private void UpdateMatchCountLabel()
@@ -261,6 +248,13 @@ public partial class MainWindow
         {
             MatchCountText.Text = string.Empty;
             MatchCountText.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        if (IsDocumentOverLimit(MatchCountSoftLimitCharacters))
+        {
+            MatchCountText.Text = "Match count disabled for large files";
+            MatchCountText.Visibility = Visibility.Visible;
             return;
         }
 
@@ -306,7 +300,9 @@ public partial class MainWindow
     {
         EditMenuPopup.IsOpen = false;
 
-        var dialog = new GoToLineDialog(EditorTextBox.GetLineIndexFromCharacterIndex(EditorTextBox.CaretIndex) + 1)
+        var documentLength = GetEditorDocumentLength();
+        var currentLineNumber = EditorTextBox.Document?.GetLineByOffset(documentLength == 0 ? 0 : Math.Clamp(EditorTextBox.CaretOffset, 0, documentLength)).LineNumber ?? 1;
+        var dialog = new GoToLineDialog(currentLineNumber)
         {
             Owner = this
         };
@@ -314,11 +310,17 @@ public partial class MainWindow
         if (dialog.ShowDialog() == true && dialog.LineNumber > 0)
         {
             var targetLine = dialog.LineNumber - 1;
-            var lineCount = EditorTextBox.LineCount;
+            var lineCount = EditorTextBox.Document?.LineCount ?? 1;
             targetLine = Math.Clamp(targetLine, 0, lineCount - 1);
-            var charIndex = EditorTextBox.GetCharacterIndexFromLineIndex(targetLine);
-            EditorTextBox.CaretIndex = charIndex;
-            EditorTextBox.ScrollToLine(targetLine);
+            var targetDocumentLine = EditorTextBox.Document?.GetLineByNumber(targetLine + 1);
+            if (targetDocumentLine is null)
+            {
+                return;
+            }
+
+            var charIndex = targetDocumentLine.Offset;
+            EditorTextBox.CaretOffset = charIndex;
+            EditorTextBox.ScrollToLine(targetLine + 1);
             EditorTextBox.Focus();
         }
     }
@@ -334,7 +336,15 @@ public partial class MainWindow
             return;
         }
 
-        FindNextInternal();
+        if (IsDocumentOverLimit(LiveSearchSoftLimitCharacters))
+        {
+            MatchCountText.Text = "Press Enter to search in large files";
+            MatchCountText.Visibility = Visibility.Visible;
+            RefreshHighlightAll();
+            return;
+        }
+
+        RefreshHighlightAll();
     }
 
     private void FindTextBox_OnKeyDown(object sender, KeyEventArgs e)
@@ -362,6 +372,7 @@ public partial class MainWindow
     private void HighlightAllCheckBox_OnUnchecked(object sender, RoutedEventArgs e)
     {
         RemoveHighlightAdorner();
+        UpdateMatchCountLabel();
     }
 
     private void FindNextButton_OnClick(object sender, RoutedEventArgs e) => FindNextInternal();
@@ -392,6 +403,17 @@ public partial class MainWindow
             return;
         }
 
+        if (IsDocumentOverLimit(ReplaceAllSoftLimitCharacters))
+        {
+            MessageBox.Show(
+                this,
+                "Replace All is disabled for very large files because it can allocate another full copy of the document and crash the app.",
+                "Notepad",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
         string newText;
         if (UseRegexCheckBox.IsChecked == true)
         {
@@ -411,82 +433,25 @@ public partial class MainWindow
             newText = Regex.Replace(EditorTextBox.Text, Regex.Escape(query), ReplaceTextBox.Text, options);
         }
 
-        var caretPos = EditorTextBox.CaretIndex;
+        var caretPos = EditorTextBox.CaretOffset;
         EditorTextBox.Text = newText;
-        EditorTextBox.CaretIndex = Math.Min(caretPos, newText.Length);
+        EditorTextBox.CaretOffset = Math.Min(caretPos, newText.Length);
         ResetFindHighlight();
         RemoveHighlightAdorner();
     }
 
     private void ApplyFindHighlight()
     {
-        if (FindPanel.Visibility != Visibility.Visible)
-        {
-            return;
-        }
-
-        EditorTextBox.SelectionBrush = GetResourceBrush("FindHighlightBrush", Colors.DodgerBlue);
-        EditorTextBox.SelectionTextBrush = GetResourceBrush("FindHighlightForegroundBrush", Colors.White);
+        RefreshHighlightAll();
     }
 
     private void ResetFindHighlight()
     {
-        EditorTextBox.SelectionBrush = GetResourceBrush("AccentSoftBrush", Color.FromArgb(0x1A, 0x00, 0x67, 0xC0));
-        EditorTextBox.SelectionTextBrush = GetResourceBrush("EditorForegroundBrush", Colors.White);
+        RefreshHighlightAll();
     }
 
     private Brush GetResourceBrush(string resourceKey, Color fallbackColor)
     {
         return Application.Current.Resources[resourceKey] as Brush ?? new SolidColorBrush(fallbackColor);
-    }
-}
-
-internal sealed class HighlightAllAdorner : Adorner
-{
-    private readonly List<(int Start, int Length)> _matches;
-    private readonly Brush _brush;
-    private readonly TextBox _textBox;
-
-    public HighlightAllAdorner(TextBox textBox, List<(int Start, int Length)> matches, Brush brush)
-        : base(textBox)
-    {
-        _textBox = textBox;
-        _matches = matches;
-        _brush = brush;
-        IsHitTestVisible = false;
-    }
-
-    protected override void OnRender(DrawingContext dc)
-    {
-        foreach (var (start, length) in _matches)
-        {
-            if (start < 0 || start + length > _textBox.Text.Length)
-            {
-                continue;
-            }
-
-            try
-            {
-                var startRect = _textBox.GetRectFromCharacterIndex(start);
-                var endRect = _textBox.GetRectFromCharacterIndex(start + length);
-
-                if (startRect.IsEmpty || endRect.IsEmpty)
-                {
-                    continue;
-                }
-
-                if (Math.Abs(startRect.Top - endRect.Top) < 2)
-                {
-                    dc.DrawRectangle(_brush, null, new Rect(startRect.Left, startRect.Top, Math.Max(2, endRect.Left - startRect.Left), startRect.Height));
-                }
-                else
-                {
-                    dc.DrawRectangle(_brush, null, new Rect(startRect.Left, startRect.Top, Math.Max(2, _textBox.ActualWidth - startRect.Left - 4), startRect.Height));
-                }
-            }
-            catch
-            {
-            }
-        }
     }
 }

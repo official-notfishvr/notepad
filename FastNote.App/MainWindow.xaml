@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
+        xmlns:controls="clr-namespace:FastNote.App.Controls"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="Untitled - Notepad"
@@ -317,30 +319,6 @@
             </Setter>
         </Style>
 
-        <Style x:Key="EditorTextBoxStyle" TargetType="TextBox">
-            <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="14,10" />
-            <Setter Property="AcceptsReturn" Value="True" />
-            <Setter Property="AcceptsTab" Value="True" />
-            <Setter Property="SpellCheck.IsEnabled" Value="False" />
-            <Setter Property="FontFamily" Value="{StaticResource EditorFont}" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
-            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
-            <Setter Property="CaretBrush" Value="{DynamicResource EditorForegroundBrush}" />
-            <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TextBox">
-                        <Border Background="{TemplateBinding Background}" BorderThickness="0">
-                            <ScrollViewer x:Name="PART_ContentHost" Padding="{TemplateBinding Padding}" />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
     <Grid>
@@ -451,11 +429,22 @@
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0">
+                        <controls:DocumentViewport x:Name="DocumentViewportControl"
+                                                   Visibility="Collapsed"
+                                                   Background="{DynamicResource EditorBackgroundBrush}"
+                                                   EditorFontSize="14" />
 
-                        <TextBox x:Name="EditorTextBox"
-                                 Style="{StaticResource EditorTextBoxStyle}"
-                                 TextChanged="EditorTextBox_OnTextChanged"
-                                 SelectionChanged="EditorTextBox_OnSelectionChanged" />
+                        <avalonedit:TextEditor x:Name="EditorTextBox"
+                                               Background="{DynamicResource EditorBackgroundBrush}"
+                                               Foreground="{DynamicResource EditorForegroundBrush}"
+                                               BorderThickness="0"
+                                               Padding="14,10"
+                                               FontFamily="{StaticResource EditorFont}"
+                                               FontSize="14"
+                                               ShowLineNumbers="False"
+                                               WordWrap="False"
+                                               HorizontalScrollBarVisibility="Auto"
+                                               VerticalScrollBarVisibility="Auto" />
 
                         <Border x:Name="StreamingBadge"
                                 HorizontalAlignment="Right"

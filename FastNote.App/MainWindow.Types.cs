@@ -1,3 +1,4 @@
+using FastNote.Core;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -33,6 +34,11 @@ public partial class MainWindow
         public DateTime LastActivatedUtc { get; set; }
         public int StreamedToEditorCharacterCount { get; set; }
         public bool IsEditorBacked { get; set; }
+        public bool IsViewportBacked { get; set; }
+        public FileDocument? VirtualDocument { get; set; }
+        public bool IsTextCacheReady { get; set; }
+        public bool IsHydratingText { get; set; }
+        public bool AutoActivateEditorWhenReady { get; set; }
 
         public string DisplayTitle
         {

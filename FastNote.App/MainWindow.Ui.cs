@@ -518,11 +518,13 @@ public partial class MainWindow
 
         if (e.ClickCount == 2)
         {
-            MaxRestoreButton_OnClick(sender, e);
+            MaxRestoreButton_OnClick(sender, new RoutedEventArgs());
+            e.Handled = true;
             return;
         }
 
         DragMove();
+        e.Handled = true;
     }
 
     private void Window_OnStateChanged(object? sender, EventArgs e) => UpdateWindowButtons();

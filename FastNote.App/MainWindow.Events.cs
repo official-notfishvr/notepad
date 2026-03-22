@@ -313,7 +313,6 @@ public partial class MainWindow
             {
                 case Button:
                 case TextBox:
-                case ScrollViewer:
                     return true;
             }
 

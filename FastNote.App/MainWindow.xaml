@@ -3,196 +3,287 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:controls="clr-namespace:FastNote.App.Controls"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
-        Title="FastNote"
-        Height="760"
-        Width="1220"
-        MinHeight="540"
-        MinWidth="840"
+        Title="Untitled - Notepad"
+        Width="1380"
+        Height="780"
+        MinWidth="980"
+        MinHeight="620"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
         AllowDrop="True"
         Drop="Window_OnDrop"
-        DragOver="Window_OnDragOver">
-    <Grid Margin="18">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+        DragOver="Window_OnDragOver"
+        StateChanged="Window_OnStateChanged">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            CornerRadius="0"
+                            GlassFrameThickness="0"
+                            ResizeBorderThickness="6"
+                            UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
 
-        <Border Grid.Row="0"
-                Padding="18"
-                Margin="0,0,0,14"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="18">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
+    <Window.Resources>
+        <Style x:Key="ToolbarIconButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="Margin" Value="3,0" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
 
+        <Style x:Key="ChromeButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+
+        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusForegroundBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="EditorTextBoxStyle">
+            <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="AcceptsReturn" Value="True" />
+            <Setter Property="AcceptsTab" Value="True" />
+            <Setter Property="SpellCheck.IsEnabled" Value="False" />
+            <Setter Property="FontFamily" Value="{StaticResource EditorFont}" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+            <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+        </Style>
+    </Window.Resources>
+
+    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource WindowBackgroundBrush}">
+        <DockPanel LastChildFill="True">
+            <Border DockPanel.Dock="Top" Background="{DynamicResource ChromeBrush}">
                 <StackPanel>
-                    <TextBlock FontSize="26"
-                               FontWeight="SemiBold"
-                               Text="FastNote" />
-                    <TextBlock Margin="0,6,0,0"
-                               Foreground="{StaticResource SubtleTextBrush}"
-                               Text="Virtualized large-file viewer built for opening multi-million-line text files without materializing the whole document in memory." />
-                </StackPanel>
-
-                <Border Grid.Column="1"
-                        Padding="12,8"
-                        Background="{StaticResource AccentSoftBrush}"
-                        CornerRadius="12">
-                    <StackPanel>
-                        <TextBlock FontWeight="SemiBold"
-                                   Foreground="{StaticResource AccentBrush}"
-                                   Text="Large File Mode" />
-                        <TextBlock Margin="0,2,0,0"
-                                   Foreground="{StaticResource SubtleTextBrush}"
-                                   Text="Viewport-only rendering" />
-                    </StackPanel>
-                </Border>
-            </Grid>
-        </Border>
-
-        <Border Grid.Row="1"
-                Padding="14"
-                Margin="0,0,0,14"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="16">
-            <DockPanel LastChildFill="False">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Click="OpenButton_OnClick" Content="Open" />
-                    <Button Style="{StaticResource ToolbarButtonStyle}" Click="ReloadButton_OnClick" Content="Reload" />
-                </StackPanel>
-
-                <TextBlock DockPanel.Dock="Right"
-                           VerticalAlignment="Center"
-                           Foreground="{StaticResource SubtleTextBrush}"
-                           Text="Ctrl+O to open" />
-            </DockPanel>
-        </Border>
-
-        <Grid Grid.Row="2">
-            <Border Background="{StaticResource PanelBrush}"
-                    BorderBrush="{StaticResource BorderBrush}"
-                    BorderThickness="1"
-                    CornerRadius="18">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                    </Grid.RowDefinitions>
-
-                    <Border Grid.Row="0"
-                            Padding="16,12"
-                            BorderBrush="{StaticResource BorderBrush}"
-                            BorderThickness="0,0,0,1">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel>
-                                <TextBlock x:Name="FileNameText"
-                                           FontSize="18"
-                                           FontWeight="SemiBold"
-                                           Text="No file loaded" />
-                                <TextBlock x:Name="FileMetaText"
-                                           Margin="0,4,0,0"
-                                           Foreground="{StaticResource SubtleTextBrush}"
-                                           Text="Open a text file to start." />
-                            </StackPanel>
-
-                            <TextBlock x:Name="LoadBadgeText"
-                                       Grid.Column="1"
-                                       VerticalAlignment="Center"
-                                       FontFamily="{StaticResource CodeFont}"
-                                       Foreground="{StaticResource AccentBrush}"
-                                       Text="Idle" />
-                        </Grid>
-                    </Border>
-
-                    <Grid Grid.Row="1">
+                    <Grid x:Name="TitleBar" Height="40" Margin="10,8,0,0" MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <controls:DocumentViewport x:Name="Viewport"
-                                                   Background="#FFFDFEFF"
-                                                   Focusable="True"
-                                                   TopLineChanged="Viewport_OnTopLineChanged" />
+                        <TextBlock Grid.Column="0"
+                                   Margin="6,0,10,0"
+                                   VerticalAlignment="Center"
+                                   FontFamily="Segoe Fluent Icons"
+                                   FontSize="16"
+                                   Foreground="{DynamicResource MenuForegroundBrush}"
+                                   Text="&#xE8A5;" />
 
-                        <ScrollBar x:Name="VerticalScrollBar"
-                                   Grid.Column="1"
-                                   Width="18"
-                                   Margin="0,6,6,6"
-                                   Orientation="Vertical"
-                                   Minimum="0"
-                                   ValueChanged="VerticalScrollBar_OnValueChanged" />
-
-                        <Border x:Name="LoadingOverlay"
-                                Grid.ColumnSpan="2"
-                                Background="#D8F6F7FB"
-                                CornerRadius="18"
-                                Visibility="Collapsed">
-                            <StackPanel Width="320"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center">
-                                <TextBlock x:Name="LoadingTitleText"
-                                           HorizontalAlignment="Center"
-                                           FontSize="22"
+                        <Border Grid.Column="1"
+                                Width="244"
+                                Height="30"
+                                Background="{DynamicResource TabActiveBrush}"
+                                CornerRadius="8,8,0,0"
+                                Padding="12,0"
+                                VerticalAlignment="Bottom">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="TabTitleText"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TabForegroundBrush}"
                                            FontWeight="SemiBold"
-                                           Text="Indexing file" />
-                                <TextBlock x:Name="LoadingDetailText"
-                                           Margin="0,10,0,0"
-                                           HorizontalAlignment="Center"
-                                           TextAlignment="Center"
-                                           Foreground="{StaticResource SubtleTextBrush}"
-                                           Text="Scanning line breaks and building the viewport index." />
-                                <ProgressBar x:Name="LoadingProgressBar"
-                                             Height="12"
-                                             Margin="0,18,0,0"
-                                             Minimum="0"
-                                             Maximum="100" />
-                            </StackPanel>
+                                           Text="Untitled"
+                                           TextTrimming="CharacterEllipsis" />
+                                <Button x:Name="CloseTabButton"
+                                        Grid.Column="1"
+                                        Width="22"
+                                        Height="22"
+                                        Margin="8,0,0,0"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent"
+                                        Click="CloseTabButton_OnClick"
+                                        Cursor="Hand">
+                                    <TextBlock VerticalAlignment="Center"
+                                               FontFamily="Segoe Fluent Icons"
+                                               FontSize="12"
+                                               Foreground="{DynamicResource EditorMutedBrush}"
+                                               Text="&#xE711;" />
+                                </Button>
+                            </Grid>
                         </Border>
+
+                        <Button x:Name="NewTabButton"
+                                Grid.Column="2"
+                                Width="28"
+                                Height="28"
+                                Margin="12,6,0,0"
+                                HorizontalAlignment="Left"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                Click="NewTabButton_OnClick"
+                                Cursor="Hand">
+                            <TextBlock VerticalAlignment="Center"
+                                       FontFamily="Segoe Fluent Icons"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource MenuForegroundBrush}"
+                                       Text="&#xE710;" />
+                        </Button>
+
+                        <StackPanel Grid.Column="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Style="{StaticResource ChromeButtonStyle}" Click="MinimizeButton_OnClick">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE921;" />
+                            </Button>
+                            <Button x:Name="MaxRestoreButton" Style="{StaticResource ChromeButtonStyle}" Click="MaxRestoreButton_OnClick">
+                                <TextBlock x:Name="MaxRestoreIcon" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE922;" />
+                            </Button>
+                            <Button Style="{StaticResource ChromeButtonStyle}" Click="CloseWindowButton_OnClick">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE8BB;" />
+                            </Button>
+                        </StackPanel>
                     </Grid>
+
+                    <Border Height="34" Background="{DynamicResource MenuBrush}">
+                        <Grid Margin="10,0,10,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <Menu Grid.Column="0" Background="Transparent">
+                                <MenuItem Header="File">
+                                    <MenuItem Header="New" Click="NewFileMenuItem_OnClick" InputGestureText="Ctrl+N" />
+                                    <MenuItem Header="Open..." Click="OpenButton_OnClick" InputGestureText="Ctrl+O" />
+                                    <MenuItem Header="Save" Click="SaveMenuItem_OnClick" InputGestureText="Ctrl+S" />
+                                    <MenuItem Header="Save As..." Click="SaveAsMenuItem_OnClick" />
+                                    <Separator />
+                                    <MenuItem Header="Reload" Click="ReloadButton_OnClick" />
+                                    <Separator />
+                                    <MenuItem Header="Exit" Click="ExitMenuItem_OnClick" />
+                                </MenuItem>
+                                <MenuItem Header="Edit">
+                                    <MenuItem Header="Undo" Click="UndoMenuItem_OnClick" InputGestureText="Ctrl+Z" />
+                                    <MenuItem Header="Cut" Click="CutMenuItem_OnClick" InputGestureText="Ctrl+X" />
+                                    <MenuItem Header="Copy" Click="CopyMenuItem_OnClick" InputGestureText="Ctrl+C" />
+                                    <MenuItem Header="Paste" Click="PasteMenuItem_OnClick" InputGestureText="Ctrl+V" />
+                                    <Separator />
+                                    <MenuItem Header="Select All" Click="SelectAllMenuItem_OnClick" InputGestureText="Ctrl+A" />
+                                </MenuItem>
+                                <MenuItem Header="View">
+                                    <MenuItem x:Name="WordWrapMenuItem" Header="Word Wrap" IsCheckable="True" Click="WordWrapMenuItem_OnClick" />
+                                    <Separator />
+                                    <MenuItem Header="Zoom In" Click="ZoomInMenuItem_OnClick" />
+                                    <MenuItem Header="Zoom Out" Click="ZoomOutMenuItem_OnClick" />
+                                    <MenuItem Header="Restore Default Zoom" Click="RestoreZoomMenuItem_OnClick" />
+                                    <Separator />
+                                    <MenuItem x:Name="StatusBarMenuItem" Header="Status Bar" IsCheckable="True" IsChecked="True" Click="StatusBarMenuItem_OnClick" />
+                                    <Separator />
+                                    <MenuItem Header="Theme">
+                                        <MenuItem x:Name="LightThemeMenuItem" Header="Light" IsCheckable="True" Click="LightThemeMenuItem_OnClick" />
+                                        <MenuItem x:Name="DarkThemeMenuItem" Header="Dark" IsCheckable="True" Click="DarkThemeMenuItem_OnClick" />
+                                    </MenuItem>
+                                </MenuItem>
+                            </Menu>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="HeadingButton_OnClick" Content="H1" FontSize="15" FontWeight="SemiBold" />
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE8CB;" Click="BulletListButton_OnClick" />
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xF246;" Click="ChecklistButton_OnClick" />
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" Content="B" FontWeight="Bold" Click="BoldButton_OnClick" />
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" Content="I" FontStyle="Italic" Click="ItalicButton_OnClick" />
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="StrikeButton_OnClick">
+                                    <TextBlock Text="S" TextDecorations="Strikethrough" />
+                                </Button>
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE71B;" Click="LinkButton_OnClick" />
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xECA5;" Click="TableButton_OnClick" />
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE8D1;" Click="ClearFormattingButton_OnClick" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE721;" Click="FindButton_OnClick" />
+                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE713;" Click="ThemeToggleToolbarButton_OnClick" />
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border x:Name="StatusChrome" DockPanel.Dock="Bottom" Background="{DynamicResource StatusBrush}">
+                <Grid Height="30" Margin="10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Horizontal">
+                        <TextBlock x:Name="CaretText" Style="{StaticResource StatusTextStyle}" Text="Ln 1, Col 1" />
+                        <Border Width="1" Height="16" Margin="16,7,16,0" Background="#2E4468" Opacity="0.45" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock x:Name="CharacterCountText" Style="{StaticResource StatusTextStyle}" Text="0 characters" />
+                        <Border Width="1" Height="16" Margin="16,7,16,0" Background="#2E4468" Opacity="0.45" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                        <TextBlock x:Name="DocumentModeText" Style="{StaticResource StatusTextStyle}" Text="Plain text" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="4" Orientation="Horizontal">
+                        <Border Width="1" Height="16" Margin="0,7,16,0" Background="#2E4468" Opacity="0.45" />
+                        <TextBlock x:Name="ZoomText" Style="{StaticResource StatusTextStyle}" Text="100%" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="5" Orientation="Horizontal">
+                        <Border Width="1" Height="16" Margin="16,7,16,0" Background="#2E4468" Opacity="0.45" />
+                        <TextBlock x:Name="LineEndingText" Style="{StaticResource StatusTextStyle}" Text="Windows (CRLF)" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="6" Orientation="Horizontal">
+                        <Border Width="1" Height="16" Margin="16,7,16,0" Background="#2E4468" Opacity="0.45" />
+                        <TextBlock x:Name="EncodingText" Style="{StaticResource StatusTextStyle}" Text="UTF-8" />
+                    </StackPanel>
                 </Grid>
             </Border>
-        </Grid>
 
-        <Border Grid.Row="3"
-                Padding="14,12"
-                Margin="0,14,0,0"
-                Background="{StaticResource PanelBrush}"
-                BorderBrush="{StaticResource BorderBrush}"
-                BorderThickness="1"
-                CornerRadius="16">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <TextBlock x:Name="StatusText"
-                           VerticalAlignment="Center"
-                           Foreground="{StaticResource SubtleTextBrush}"
-                           Text="Ready." />
-                <TextBlock x:Name="ViewportStatusText"
-                           Grid.Column="1"
-                           VerticalAlignment="Center"
-                           FontFamily="{StaticResource CodeFont}"
-                           Foreground="{StaticResource SubtleTextBrush}"
-                           Text="Line 0 / 0" />
+            <Grid Background="{DynamicResource EditorBackgroundBrush}">
+                <TextBox x:Name="EditorTextBox"
+                         Style="{StaticResource EditorTextBoxStyle}"
+                         TextChanged="EditorTextBox_OnTextChanged"
+                         SelectionChanged="EditorTextBox_OnSelectionChanged" />
+
+                <Border x:Name="StreamingBadge"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        Margin="0,10,18,0"
+                        Padding="10,4"
+                        Background="#A0191030"
+                        CornerRadius="6"
+                        Visibility="Collapsed">
+                    <TextBlock x:Name="LoadingText"
+                               Foreground="#D9D3F5"
+                               FontSize="12"
+                               Text="Loading..." />
+                </Border>
             </Grid>
-        </Border>
-    </Grid>
+        </DockPanel>
+    </Border>
 </Window>

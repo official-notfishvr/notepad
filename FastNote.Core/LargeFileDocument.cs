@@ -8,41 +8,102 @@ namespace FastNote.Core;
 public sealed class LargeFileDocument : IDisposable
 {
     private const int ScanBufferSize = 1024 * 1024;
+    private const int InitialScanBytes = 2 * 1024 * 1024;
+    private const int InitialTargetLines = 6000;
     private const int MaxVisibleCharsPerLine = 2048;
 
     private readonly SafeFileHandle _handle;
-    private readonly long[] _lineStarts;
+    private readonly object _stateGate = new();
+    private readonly List<long> _lineStarts;
     private readonly Encoding _encoding;
-    private readonly object _cacheGate = new();
+    private readonly CancellationTokenSource _scanCancellation = new();
 
     private CachedBlock? _cache;
+    private long _scanPosition;
+    private bool _isIndexComplete;
+    private FileLoadProgress _latestProgress;
 
     private LargeFileDocument(
         string path,
         long fileSizeBytes,
-        long[] lineStarts,
         Encoding encoding,
-        TimeSpan indexDuration,
-        SafeFileHandle handle)
+        SafeFileHandle handle,
+        List<long> lineStarts,
+        long scanPosition,
+        bool isIndexComplete,
+        TimeSpan initialOpenDuration,
+        FileLoadProgress latestProgress)
     {
         Path = path;
         FileSizeBytes = fileSizeBytes;
-        _lineStarts = lineStarts;
         _encoding = encoding;
-        EncodingName = encoding.EncodingName;
-        IndexDuration = indexDuration;
         _handle = handle;
+        _lineStarts = lineStarts;
+        _scanPosition = scanPosition;
+        _isIndexComplete = isIndexComplete;
+        InitialOpenDuration = initialOpenDuration;
+        IndexDuration = initialOpenDuration;
+        _latestProgress = latestProgress;
+        EncodingName = encoding.EncodingName;
     }
+
+    public event EventHandler<FileLoadProgress>? ProgressChanged;
 
     public string Path { get; }
 
     public long FileSizeBytes { get; }
 
-    public long LineCount => _lineStarts.Length;
-
     public string EncodingName { get; }
 
-    public TimeSpan IndexDuration { get; }
+    public long LineCount
+    {
+        get
+        {
+            lock (_stateGate)
+            {
+                return _lineStarts.Count;
+            }
+        }
+    }
+
+    public long IndexedLineCount => LineCount;
+
+    public bool IsIndexComplete
+    {
+        get
+        {
+            lock (_stateGate)
+            {
+                return _isIndexComplete;
+            }
+        }
+    }
+
+    public long BytesIndexed
+    {
+        get
+        {
+            lock (_stateGate)
+            {
+                return _scanPosition;
+            }
+        }
+    }
+
+    public TimeSpan InitialOpenDuration { get; }
+
+    public TimeSpan IndexDuration { get; private set; }
+
+    public FileLoadProgress LatestProgress
+    {
+        get
+        {
+            lock (_stateGate)
+            {
+                return _latestProgress;
+            }
+        }
+    }
 
     public static Task<LargeFileDocument> OpenAsync(
         string path,
@@ -54,15 +115,16 @@ public sealed class LargeFileDocument : IDisposable
 
     public IReadOnlyList<string> ReadLines(long firstLine, int count)
     {
-        if (count <= 0 || LineCount == 0)
+        var indexedCount = IndexedLineCount;
+        if (count <= 0 || indexedCount == 0)
         {
             return Array.Empty<string>();
         }
 
-        firstLine = Math.Clamp(firstLine, 0, LineCount - 1);
-        count = (int)Math.Min(count, LineCount - firstLine);
+        firstLine = Math.Clamp(firstLine, 0, indexedCount - 1);
+        count = (int)Math.Min(count, indexedCount - firstLine);
 
-        lock (_cacheGate)
+        lock (_stateGate)
         {
             if (_cache is { } cache &&
                 firstLine >= cache.StartLine &&
@@ -78,7 +140,7 @@ public sealed class LargeFileDocument : IDisposable
             lines[i] = ReadSingleLine(firstLine + i);
         }
 
-        lock (_cacheGate)
+        lock (_stateGate)
         {
             _cache = new CachedBlock(firstLine, lines);
         }
@@ -86,9 +148,25 @@ public sealed class LargeFileDocument : IDisposable
         return lines;
     }
 
+    public long EstimateTotalLineCount()
+    {
+        lock (_stateGate)
+        {
+            if (_isIndexComplete || _scanPosition <= 0)
+            {
+                return _lineStarts.Count;
+            }
+
+            var rate = _lineStarts.Count / (double)Math.Max(1, _scanPosition);
+            return Math.Max(_lineStarts.Count, (long)Math.Ceiling(rate * FileSizeBytes));
+        }
+    }
+
     public void Dispose()
     {
+        _scanCancellation.Cancel();
         _handle.Dispose();
+        _scanCancellation.Dispose();
     }
 
     private static LargeFileDocument OpenInternal(
@@ -101,7 +179,6 @@ public sealed class LargeFileDocument : IDisposable
             throw new FileNotFoundException("The file does not exist.", path);
         }
 
-        var stopwatch = Stopwatch.StartNew();
         using var stream = new FileStream(
             path,
             FileMode.Open,
@@ -112,33 +189,156 @@ public sealed class LargeFileDocument : IDisposable
 
         var fileLength = stream.Length;
         var encoding = DetectEncoding(stream, out var startOffset);
-        var lineStarts = BuildLineIndex(path, stream, fileLength, startOffset, progress, cancellationToken);
-        stopwatch.Stop();
+        var openStopwatch = Stopwatch.StartNew();
+        var lineStarts = new List<long>(EstimateLineCapacity(fileLength)) { startOffset };
+        var initialPosition = ScanChunk(
+            path,
+            stream,
+            fileLength,
+            startOffset,
+            InitialScanBytes,
+            InitialTargetLines,
+            lineStarts,
+            progress,
+            cancellationToken);
+        openStopwatch.Stop();
 
+        var isComplete = initialPosition >= fileLength;
+        var latestProgress = new FileLoadProgress(path, initialPosition, fileLength, lineStarts.Count);
         var handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-        return new LargeFileDocument(path, fileLength, lineStarts, encoding, stopwatch.Elapsed, handle);
+
+        var document = new LargeFileDocument(
+            path,
+            fileLength,
+            encoding,
+            handle,
+            lineStarts,
+            initialPosition,
+            isComplete,
+            openStopwatch.Elapsed,
+            latestProgress);
+
+        progress?.Report(latestProgress);
+
+        if (!isComplete)
+        {
+            document.StartBackgroundScan(initialPosition);
+        }
+
+        return document;
     }
 
-    private static long[] BuildLineIndex(
+    private void StartBackgroundScan(long startPosition)
+    {
+        _ = Task.Run(() => BackgroundScanWorker(startPosition, _scanCancellation.Token));
+    }
+
+    private void BackgroundScanWorker(long startPosition, CancellationToken cancellationToken)
+    {
+        var stopwatch = Stopwatch.StartNew();
+        try
+        {
+            using var stream = new FileStream(
+                Path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete,
+                ScanBufferSize,
+                FileOptions.SequentialScan);
+
+            stream.Position = startPosition;
+            var buffer = ArrayPool<byte>.Shared.Rent(ScanBufferSize);
+            try
+            {
+                long absolutePosition = startPosition;
+                int read;
+                while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    lock (_stateGate)
+                    {
+                        for (var i = 0; i < read; i++)
+                        {
+                            if (buffer[i] == (byte)'\n' && absolutePosition + i + 1 < FileSizeBytes)
+                            {
+                                _lineStarts.Add(absolutePosition + i + 1);
+                            }
+                        }
+
+                        _scanPosition = absolutePosition + read;
+                        _latestProgress = new FileLoadProgress(Path, _scanPosition, FileSizeBytes, _lineStarts.Count);
+                    }
+
+                    absolutePosition += read;
+                    RaiseProgressChanged();
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+
+            lock (_stateGate)
+            {
+                _scanPosition = FileSizeBytes;
+                _isIndexComplete = true;
+                _latestProgress = new FileLoadProgress(Path, FileSizeBytes, FileSizeBytes, _lineStarts.Count);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            stopwatch.Stop();
+            lock (_stateGate)
+            {
+                IndexDuration = InitialOpenDuration + stopwatch.Elapsed;
+            }
+
+            RaiseProgressChanged();
+        }
+    }
+
+    private void RaiseProgressChanged()
+    {
+        FileLoadProgress progressSnapshot;
+        lock (_stateGate)
+        {
+            progressSnapshot = _latestProgress;
+        }
+
+        ProgressChanged?.Invoke(this, progressSnapshot);
+    }
+
+    private static long ScanChunk(
         string path,
         FileStream stream,
         long fileLength,
         long startOffset,
+        int maxBytes,
+        int targetLines,
+        List<long> lineStarts,
         IProgress<FileLoadProgress>? progress,
         CancellationToken cancellationToken)
     {
-        var lineStarts = new List<long>(EstimateLineCapacity(fileLength));
-        lineStarts.Add(startOffset);
-
+        stream.Position = startOffset;
         var buffer = ArrayPool<byte>.Shared.Rent(ScanBufferSize);
         try
         {
-            stream.Position = startOffset;
             long absolutePosition = startOffset;
-            int read;
-            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
+            var scannedBytes = 0;
+
+            while (scannedBytes < maxBytes && lineStarts.Count < targetLines)
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                var remaining = Math.Min(buffer.Length, maxBytes - scannedBytes);
+                var read = stream.Read(buffer, 0, remaining);
+                if (read <= 0)
+                {
+                    break;
+                }
 
                 for (var i = 0; i < read; i++)
                 {
@@ -149,16 +349,16 @@ public sealed class LargeFileDocument : IDisposable
                 }
 
                 absolutePosition += read;
+                scannedBytes += read;
                 progress?.Report(new FileLoadProgress(path, absolutePosition, fileLength, lineStarts.Count));
             }
+
+            return absolutePosition;
         }
         finally
         {
             ArrayPool<byte>.Shared.Return(buffer);
         }
-
-        progress?.Report(new FileLoadProgress(path, fileLength, fileLength, lineStarts.Count));
-        return lineStarts.ToArray();
     }
 
     private static int EstimateLineCapacity(long fileLength)
@@ -186,8 +386,19 @@ public sealed class LargeFileDocument : IDisposable
 
     private string ReadSingleLine(long lineIndex)
     {
-        var start = _lineStarts[lineIndex];
-        var endExclusive = lineIndex + 1 < _lineStarts.Length ? _lineStarts[lineIndex + 1] : FileSizeBytes;
+        long start;
+        long endExclusive;
+
+        lock (_stateGate)
+        {
+            start = _lineStarts[(int)lineIndex];
+            endExclusive = lineIndex + 1 < _lineStarts.Count ? _lineStarts[(int)lineIndex + 1] : BytesIndexed;
+            if (_isIndexComplete && lineIndex + 1 >= _lineStarts.Count)
+            {
+                endExclusive = FileSizeBytes;
+            }
+        }
+
         var rawLength = Math.Max(0, endExclusive - start);
         if (rawLength == 0)
         {

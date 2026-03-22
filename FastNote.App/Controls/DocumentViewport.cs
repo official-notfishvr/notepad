@@ -15,7 +15,23 @@ public sealed class DocumentViewport : FrameworkElement
             typeof(DocumentViewport),
             new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    private readonly Typeface _typeface = new(new FontFamily("Cascadia Mono"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+    public static readonly DependencyProperty EditorFontSizeProperty =
+        DependencyProperty.Register(
+            nameof(EditorFontSize),
+            typeof(double),
+            typeof(DocumentViewport),
+            new FrameworkPropertyMetadata(14d, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    public static readonly DependencyProperty WrapTextProperty =
+        DependencyProperty.Register(
+            nameof(WrapText),
+            typeof(bool),
+            typeof(DocumentViewport),
+            new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    private readonly Typeface _typeface =
+        new(new FontFamily("Consolas"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+
     private LargeFileDocument? _document;
     private long _topLine;
     private double _lineHeight = 20;
@@ -28,13 +44,36 @@ public sealed class DocumentViewport : FrameworkElement
         set => SetValue(BackgroundProperty, value);
     }
 
+    public double EditorFontSize
+    {
+        get => (double)GetValue(EditorFontSizeProperty);
+        set => SetValue(EditorFontSizeProperty, value);
+    }
+
+    public bool WrapText
+    {
+        get => (bool)GetValue(WrapTextProperty);
+        set => SetValue(WrapTextProperty, value);
+    }
+
     public LargeFileDocument? Document
     {
         get => _document;
         set
         {
+            if (_document is not null)
+            {
+                _document.ProgressChanged -= DocumentOnProgressChanged;
+            }
+
             _document = value;
             _topLine = 0;
+
+            if (_document is not null)
+            {
+                _document.ProgressChanged += DocumentOnProgressChanged;
+            }
+
             InvalidateMeasure();
             InvalidateVisual();
             TopLineChanged?.Invoke(this, EventArgs.Empty);
@@ -52,35 +91,39 @@ public sealed class DocumentViewport : FrameworkElement
 
         if (_document is null)
         {
-            DrawCenteredMessage(drawingContext, "Drop a file here or press Ctrl+O");
+            DrawCenteredMessage(drawingContext, "Open or drop a text file");
             return;
         }
 
         var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var sample = CreateFormattedText("Hg", pixelsPerDip, Brushes.Black);
-        _lineHeight = sample.Height + 3;
+        var textBrush = GetBrush("EditorForegroundBrush", new SolidColorBrush(Color.FromRgb(36, 39, 45)));
+        var sample = CreateFormattedText("Hg", pixelsPerDip, textBrush);
+        _lineHeight = sample.Height + 4;
 
-        var gutterWidth = CalculateGutterWidth(pixelsPerDip);
-        var gutterBrush = new SolidColorBrush(Color.FromRgb(246, 248, 252));
-        var borderPen = new Pen(new SolidColorBrush(Color.FromRgb(223, 229, 238)), 1);
-        var lineNumberBrush = new SolidColorBrush(Color.FromRgb(115, 127, 145));
-        var contentBrush = new SolidColorBrush(Color.FromRgb(28, 39, 55));
+        var paddingX = 10d;
+        var lineWidth = Math.Max(80, ActualWidth - paddingX * 2);
+        var lines = _document.ReadLines(_topLine, VisibleLineCount + 2);
 
-        drawingContext.DrawRectangle(gutterBrush, null, new Rect(0, 0, gutterWidth, ActualHeight));
-        drawingContext.DrawLine(borderPen, new Point(gutterWidth, 0), new Point(gutterWidth, ActualHeight));
-
-        var lines = _document.ReadLines(_topLine, VisibleLineCount);
         for (var i = 0; i < lines.Count; i++)
         {
-            var lineNumber = _topLine + i + 1;
             var y = i * _lineHeight + 6;
+            if (y > ActualHeight)
+            {
+                break;
+            }
 
-            var lineNumberText = CreateFormattedText(lineNumber.ToString("N0", CultureInfo.InvariantCulture), pixelsPerDip, lineNumberBrush);
-            drawingContext.DrawText(lineNumberText, new Point(gutterWidth - lineNumberText.Width - 12, y));
+            var contentText = CreateFormattedText(lines[i], pixelsPerDip, textBrush);
+            if (WrapText)
+            {
+                contentText.MaxTextWidth = lineWidth;
+            }
 
-            var contentText = CreateFormattedText(lines[i], pixelsPerDip, contentBrush);
-            contentText.MaxTextWidth = Math.Max(80, ActualWidth - gutterWidth - 24);
-            drawingContext.DrawText(contentText, new Point(gutterWidth + 12, y));
+            drawingContext.DrawText(contentText, new Point(paddingX, y));
+        }
+
+        if (!_document.IsIndexComplete)
+        {
+            DrawLoadingHint(drawingContext, pixelsPerDip);
         }
     }
 
@@ -125,7 +168,7 @@ public sealed class DocumentViewport : FrameworkElement
                 e.Handled = true;
                 break;
             case Key.End:
-                ScrollToLine(Math.Max(0, _document.LineCount - VisibleLineCount));
+                ScrollToLine(Math.Max(0, _document.EstimateTotalLineCount() - VisibleLineCount));
                 e.Handled = true;
                 break;
         }
@@ -149,7 +192,7 @@ public sealed class DocumentViewport : FrameworkElement
             return;
         }
 
-        var maxTopLine = Math.Max(0, _document.LineCount - VisibleLineCount);
+        var maxTopLine = Math.Max(0, _document.EstimateTotalLineCount() - VisibleLineCount);
         var clamped = Math.Clamp(line, 0, maxTopLine);
         if (clamped == _topLine)
         {
@@ -161,11 +204,13 @@ public sealed class DocumentViewport : FrameworkElement
         TopLineChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private double CalculateGutterWidth(double pixelsPerDip)
+    private void DocumentOnProgressChanged(object? sender, FileLoadProgress e)
     {
-        var maxLineNumber = _document?.LineCount ?? 1;
-        var text = CreateFormattedText(maxLineNumber.ToString("N0", CultureInfo.InvariantCulture), pixelsPerDip, Brushes.Black);
-        return text.Width + 28;
+        Dispatcher.BeginInvoke(() =>
+        {
+            InvalidateVisual();
+            TopLineChanged?.Invoke(this, EventArgs.Empty);
+        });
     }
 
     private FormattedText CreateFormattedText(string text, double pixelsPerDip, Brush foreground)
@@ -175,7 +220,7 @@ public sealed class DocumentViewport : FrameworkElement
             CultureInfo.InvariantCulture,
             FlowDirection.LeftToRight,
             _typeface,
-            13,
+            EditorFontSize,
             foreground,
             pixelsPerDip);
     }
@@ -183,7 +228,21 @@ public sealed class DocumentViewport : FrameworkElement
     private void DrawCenteredMessage(DrawingContext drawingContext, string message)
     {
         var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var text = CreateFormattedText(message, pixelsPerDip, new SolidColorBrush(Color.FromRgb(95, 109, 131)));
+        var text = CreateFormattedText(message, pixelsPerDip, GetBrush("EditorMutedBrush", new SolidColorBrush(Color.FromRgb(110, 113, 120))));
         drawingContext.DrawText(text, new Point((ActualWidth - text.Width) / 2, (ActualHeight - text.Height) / 2));
+    }
+
+    private void DrawLoadingHint(DrawingContext drawingContext, double pixelsPerDip)
+    {
+        var hint = CreateFormattedText(
+            "Loading more lines...",
+            pixelsPerDip,
+            GetBrush("EditorMutedBrush", new SolidColorBrush(Color.FromRgb(110, 113, 120))));
+        drawingContext.DrawText(hint, new Point(Math.Max(12, ActualWidth - hint.Width - 18), Math.Max(10, ActualHeight - hint.Height - 10)));
+    }
+
+    private static Brush GetBrush(string key, Brush fallback)
+    {
+        return Application.Current.Resources[key] as Brush ?? fallback;
     }
 }

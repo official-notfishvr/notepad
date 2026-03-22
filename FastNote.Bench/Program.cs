@@ -1,5 +1,6 @@
 using FastNote.Core;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 if (args.Length == 0)
 {
@@ -14,13 +15,32 @@ if (!File.Exists(path))
     return;
 }
 
-var stopwatch = Stopwatch.StartNew();
+var openStopwatch = Stopwatch.StartNew();
 using var document = await LargeFileDocument.OpenAsync(path);
-stopwatch.Stop();
+openStopwatch.Stop();
 
 Console.WriteLine($"Path: {path}");
-Console.WriteLine($"Lines: {document.LineCount:N0}");
-Console.WriteLine($"Size: {document.FileSizeBytes:N0} bytes");
+Console.WriteLine($"Initial lines: {document.IndexedLineCount:N0}");
+Console.WriteLine($"Estimated total after open: {document.EstimateTotalLineCount():N0}");
+Console.WriteLine($"Initial open: {openStopwatch.Elapsed.TotalMilliseconds:N0} ms");
+
+if (!document.IsIndexComplete)
+{
+    var completionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    document.ProgressChanged += OnProgressChanged;
+    await completionSource.Task;
+    document.ProgressChanged -= OnProgressChanged;
+
+    void OnProgressChanged(object? sender, FileLoadProgress progress)
+    {
+        if (document.IsIndexComplete)
+        {
+            completionSource.TrySetResult();
+        }
+    }
+}
+
+Console.WriteLine($"Final lines: {document.LineCount:N0}");
+Console.WriteLine($"Full index: {document.IndexDuration.TotalMilliseconds:N0} ms");
 Console.WriteLine($"Encoding: {document.EncodingName}");
-Console.WriteLine($"Engine: {document.IndexDuration.TotalMilliseconds:N0} ms");
-Console.WriteLine($"Total: {stopwatch.Elapsed.TotalMilliseconds:N0} ms");
+Console.WriteLine($"Size: {document.FileSizeBytes:N0} bytes");

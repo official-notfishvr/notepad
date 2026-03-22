@@ -1,26 +1,29 @@
 # FastNote
 
-FastNote is a Visual Studio WPF project aimed at very large text files. Instead of loading the entire file into a text control, it scans the file once, stores byte offsets for each line, and renders only the visible lines.
+FastNote is a Visual Studio WPF project that mimics the Windows 11 Notepad shell while keeping large-file opening fast through streaming and background indexing.
 
-## Architecture
+## What it does
 
-- `FastNote.App`: C# WPF UI with a custom virtualized viewport.
-- `FastNote.Core`: file indexing and random-access line reader.
+- Windows 11 Notepad-inspired light and dark themes
+- Native-style menu bar, single-tab shell, plain editor canvas, and status bar
+- Progressive open path: the first chunk appears immediately, then the rest of the file indexes in the background
+- Virtualized renderer for large files instead of loading the entire document into a text box
+- Word wrap and zoom controls
 
-## Large-file strategy
+## Projects
 
-- Single pass over the file to build line-start offsets.
-- No full-document string allocation.
-- Visible lines are pulled from disk on demand.
-- Long lines are clipped in the viewport to keep scrolling responsive.
+- `FastNote.App`: WPF desktop UI
+- `FastNote.Core`: streaming file reader and line indexer
+- `FastNote.Bench`: benchmark harness for initial-open versus full-index timing
 
-## Open in Visual Studio
-
-Open `FastNote.slnx` in Visual Studio 2026 or newer.
-
-## Build from terminal
+## Build
 
 ```powershell
-dotnet sln FastNote.slnx add FastNote.App\FastNote.App.csproj FastNote.Core\FastNote.Core.csproj
 dotnet build FastNote.slnx -c Release
+```
+
+## Benchmark
+
+```powershell
+dotnet run --project FastNote.Bench\FastNote.Bench.csproj -c Release -- <path-to-file>
 ```

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="FastNote.App/FastNote.App.csproj" />
+  <Project Path="FastNote.Bench/FastNote.Bench.csproj" />
+  <Project Path="FastNote.Core/FastNote.Core.csproj" />
+</Solution>

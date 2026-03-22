@@ -19,12 +19,15 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _statusRefreshTimer;
     private readonly DispatcherTimer _findRefreshTimer;
     private readonly SearchHighlightColorizer _searchHighlightColorizer;
+    private readonly List<string> _recentFiles;
     private CancellationTokenSource? _matchCountTokenSource;
 
     private AppThemeMode _themeMode = AppThemeMode.Dark;
+    private AppAppearanceMode _appearanceMode = AppAppearanceMode.Classic;
     private bool _isInternalUpdate;
     private bool _statusBarVisible = true;
     private bool _replaceVisible;
+    private bool _findOptionsVisible = true;
     private int _activeTabIndex = -1;
 
     private FontFamily _editorFontFamily = new("Segoe UI Variable Text");
@@ -34,6 +37,11 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         _appSettings = AppSettingsStore.Load();
+        _recentFiles = _appSettings.RecentFiles
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(10)
+            .ToList();
         InitializeComponent();
         ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
         UpdateWindowButtons();
@@ -72,6 +80,7 @@ public partial class MainWindow : Window
 
         CreateNewTabAndActivate();
         ApplySavedSettings();
+        RebuildRecentFilesMenu();
         EditorTextBox.Focus();
         Loaded += MainWindow_OnLoaded;
     }

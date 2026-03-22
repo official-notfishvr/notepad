@@ -81,6 +81,10 @@ public partial class MainWindow
                     e.Handled = true;
                     PrintMenuItem_OnClick(this, new RoutedEventArgs());
                     return;
+                case Key.E:
+                    e.Handled = true;
+                    SearchWithBingMenuItem_OnClick(this, new RoutedEventArgs());
+                    return;
                 case Key.OemComma:
                     e.Handled = true;
                     SettingsMenuItem_OnClick(this, new RoutedEventArgs());
@@ -98,6 +102,20 @@ public partial class MainWindow
                 NewWindowMenuItem_OnClick(this, new RoutedEventArgs());
                 return;
             }
+
+            if (e.Key == Key.W)
+            {
+                e.Handled = true;
+                CloseWindowMenuItem_OnClick(this, new RoutedEventArgs());
+                return;
+            }
+        }
+
+        if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Alt) && e.Key == Key.S)
+        {
+            e.Handled = true;
+            SaveAllMenuItem_OnClick(this, new RoutedEventArgs());
+            return;
         }
 
         if (e.Key == Key.F3)

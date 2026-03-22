@@ -8,6 +8,7 @@ namespace FastNote.App;
 public partial class SettingsWindow : Window
 {
     public string SelectedTheme { get; private set; } = "Dark";
+    public string SelectedAppearanceMode { get; private set; } = "Classic";
     public bool ShowStatusBar { get; private set; }
     public bool DefaultWordWrap { get; private set; }
 
@@ -15,6 +16,7 @@ public partial class SettingsWindow : Window
     {
         InitializeComponent();
 
+        AppearanceComboBox.SelectedIndex = string.Equals(settings.AppearanceMode, "Windows11", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         ThemeComboBox.SelectedIndex = string.Equals(settings.Theme, "Light", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         StatusBarCheckBox.IsChecked = settings.StatusBarVisible;
         WordWrapCheckBox.IsChecked = settings.DefaultWordWrap;
@@ -23,6 +25,7 @@ public partial class SettingsWindow : Window
 
     private void SaveButton_OnClick(object sender, RoutedEventArgs e)
     {
+        SelectedAppearanceMode = ((AppearanceComboBox.SelectedItem as ComboBoxItem)?.Content as string) == "Windows 11" ? "Windows11" : "Classic";
         SelectedTheme = ((ThemeComboBox.SelectedItem as ComboBoxItem)?.Content as string) ?? "Dark";
         ShowStatusBar = StatusBarCheckBox.IsChecked == true;
         DefaultWordWrap = WordWrapCheckBox.IsChecked == true;

@@ -307,7 +307,8 @@ public partial class MainWindow
     {
         FindPanel.Visibility = Visibility.Visible;
         _replaceVisible = showReplace;
-        ReplaceRowPanel.Visibility = showReplace ? Visibility.Visible : Visibility.Collapsed;
+        _findOptionsVisible = false;
+        UpdateFindPanelControls();
         FindTextBox.Focus();
         FindTextBox.SelectAll();
     }
@@ -322,6 +323,20 @@ public partial class MainWindow
     {
         EditMenuPopup.IsOpen = false;
         OpenFindPanel(showReplace: true);
+    }
+
+    private void FindNextMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        EditMenuPopup.IsOpen = false;
+        OpenFindPanel(showReplace: false);
+        FindNextInternal();
+    }
+
+    private void FindPreviousMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        EditMenuPopup.IsOpen = false;
+        OpenFindPanel(showReplace: false);
+        FindPreviousInternal();
     }
 
     private void GoToMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -423,18 +438,21 @@ public partial class MainWindow
         }
 
         var sourceText = EditorTextBox.Text;
+        var replacementText = ReplaceTextBox.Text;
+        var useRegex = UseRegexCheckBox.IsChecked == true;
+        var matchCase = MatchCaseCheckBox.IsChecked == true;
         string newText;
-        if (UseRegexCheckBox.IsChecked == true)
+        if (useRegex)
         {
             try
             {
                 var options = RegexOptions.Multiline;
-                if (MatchCaseCheckBox.IsChecked != true)
+                if (!matchCase)
                 {
                     options |= RegexOptions.IgnoreCase;
                 }
 
-                newText = await Task.Run(() => Regex.Replace(sourceText, query, ReplaceTextBox.Text, options));
+                newText = await Task.Run(() => Regex.Replace(sourceText, query, replacementText, options));
             }
             catch
             {
@@ -444,8 +462,8 @@ public partial class MainWindow
         }
         else
         {
-            var options = MatchCaseCheckBox.IsChecked == true ? RegexOptions.None : RegexOptions.IgnoreCase;
-            newText = await Task.Run(() => Regex.Replace(sourceText, Regex.Escape(query), ReplaceTextBox.Text, options));
+            var options = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
+            newText = await Task.Run(() => Regex.Replace(sourceText, Regex.Escape(query), replacementText, options));
         }
 
         var caretPos = EditorTextBox.CaretOffset;

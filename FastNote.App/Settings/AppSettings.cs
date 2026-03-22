@@ -6,12 +6,14 @@ namespace FastNote.App.Settings;
 public sealed class AppSettings
 {
     public string Theme { get; set; } = "Dark";
+    public string AppearanceMode { get; set; } = "Classic";
     public bool StatusBarVisible { get; set; } = true;
     public bool DefaultWordWrap { get; set; }
     public string EditorFontFamily { get; set; } = "Segoe UI Variable Text";
     public string EditorFontStyle { get; set; } = "Normal";
     public string EditorFontWeight { get; set; } = "Normal";
     public double EditorFontSize { get; set; } = 14;
+    public List<string> RecentFiles { get; set; } = [];
     public bool SetupCompleted { get; set; }
 }
 

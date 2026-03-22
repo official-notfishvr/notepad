@@ -1,6 +1,7 @@
 using System.IO;
 using System.Net;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using Markdig;
 
@@ -38,8 +39,11 @@ public partial class MainWindow
 
         MarkdownPreviewMenuItem.Visibility = supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
         MarkdownPreviewToolbarButton.Visibility = supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
+        MarkdownToolbar.Visibility = _appearanceMode == AppAppearanceMode.Windows11 && supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
         MarkdownPreviewGlyph.Opacity = isPreviewActive ? 0.85 : 0;
         MarkdownPreviewToolbarButton.Content = isPreviewActive ? "Edit markdown" : "Markdown preview";
+        Windows11MarkdownPreviewToolbarButton.Visibility = supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
+        Windows11MarkdownPreviewText.Text = isPreviewActive ? "Edit" : "Preview";
     }
 
     private void RefreshMarkdownPreview(DocumentTab? tab)
@@ -210,5 +214,151 @@ public partial class MainWindow
     private static string ColorToCss(Color color)
     {
         return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+    }
+
+    private void WrapSelectionWithMarkdown(string prefix, string suffix, string placeholder)
+    {
+        var selectedText = EditorTextBox.SelectedText;
+        var content = string.IsNullOrEmpty(selectedText) ? placeholder : selectedText;
+        var replacement = $"{prefix}{content}{suffix}";
+        var start = EditorTextBox.SelectionStart;
+        EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, replacement);
+        EditorTextBox.Select(start + prefix.Length, content.Length);
+        EditorTextBox.Focus();
+    }
+
+    private void PrefixSelectionWithMarkdown(string prefix, string placeholder)
+    {
+        var selectedText = EditorTextBox.SelectedText;
+        if (string.IsNullOrWhiteSpace(selectedText))
+        {
+            InsertTextAtCaret(prefix + placeholder);
+            return;
+        }
+
+        var lines = selectedText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        var prefixed = string.Join(Environment.NewLine, lines.Select(line => prefix + line));
+        var start = EditorTextBox.SelectionStart;
+        EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, prefixed);
+        EditorTextBox.Select(start, prefixed.Length);
+        EditorTextBox.Focus();
+    }
+
+    private void ClearMarkdownFormatting()
+    {
+        var selectedText = EditorTextBox.SelectedText;
+        if (string.IsNullOrEmpty(selectedText))
+        {
+            return;
+        }
+
+        var cleaned = selectedText
+            .Replace("**", string.Empty, StringComparison.Ordinal)
+            .Replace("*", string.Empty, StringComparison.Ordinal)
+            .Replace("~~", string.Empty, StringComparison.Ordinal)
+            .Replace("[", string.Empty, StringComparison.Ordinal)
+            .Replace("]", string.Empty, StringComparison.Ordinal)
+            .Replace("(", string.Empty, StringComparison.Ordinal)
+            .Replace(")", string.Empty, StringComparison.Ordinal);
+
+        var start = EditorTextBox.SelectionStart;
+        EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, cleaned);
+        EditorTextBox.Select(start, cleaned.Length);
+    }
+
+    private void ApplyHeading(string prefix)
+    {
+        if (string.IsNullOrEmpty(prefix))
+        {
+            var selectedText = EditorTextBox.SelectedText;
+            if (string.IsNullOrWhiteSpace(selectedText))
+            {
+                return;
+            }
+
+            var lines = selectedText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+            var cleaned = string.Join(Environment.NewLine, lines.Select(line => line.TrimStart('#', ' ')));
+            var start = EditorTextBox.SelectionStart;
+            EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, cleaned);
+            EditorTextBox.Select(start, cleaned.Length);
+            return;
+        }
+
+        PrefixSelectionWithMarkdown(prefix, "Heading");
+    }
+
+    private void ApplyListFormatting(string mode)
+    {
+        var selectedText = EditorTextBox.SelectedText;
+        if (string.IsNullOrWhiteSpace(selectedText))
+        {
+            selectedText = "List item";
+        }
+
+        var lines = selectedText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        for (var index = 0; index < lines.Length; index++)
+        {
+            switch (mode)
+            {
+                case "bullet":
+                    lines[index] = $"- {lines[index].TrimStart()}";
+                    break;
+                case "number":
+                    lines[index] = $"{index + 1}. {lines[index].TrimStart()}";
+                    break;
+                case "indent-more":
+                    lines[index] = $"    {lines[index]}";
+                    break;
+                case "indent-less":
+                    lines[index] = lines[index].StartsWith("    ", StringComparison.Ordinal) ? lines[index][4..] : lines[index].TrimStart();
+                    break;
+            }
+        }
+
+        var replacement = string.Join(Environment.NewLine, lines);
+        var start = EditorTextBox.SelectionStart;
+        EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, replacement);
+        EditorTextBox.Select(start, replacement.Length);
+        EditorTextBox.Focus();
+    }
+
+    private void HeadingButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ListMenuPopup.IsOpen = false;
+        HeadingMenuPopup.IsOpen = !HeadingMenuPopup.IsOpen;
+    }
+
+    private void BoldButton_OnClick(object sender, RoutedEventArgs e) => WrapSelectionWithMarkdown("**", "**", "bold text");
+
+    private void ItalicButton_OnClick(object sender, RoutedEventArgs e) => WrapSelectionWithMarkdown("*", "*", "italic text");
+
+    private void StrikeButton_OnClick(object sender, RoutedEventArgs e) => WrapSelectionWithMarkdown("~~", "~~", "strikethrough");
+
+    private void LinkButton_OnClick(object sender, RoutedEventArgs e) => WrapSelectionWithMarkdown("[", "](https://)", "link text");
+
+    private void ListButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        HeadingMenuPopup.IsOpen = false;
+        ListMenuPopup.IsOpen = !ListMenuPopup.IsOpen;
+    }
+
+    private void TableButton_OnClick(object sender, RoutedEventArgs e) => InsertTextAtCaret($"| Column 1 | Column 2 |{Environment.NewLine}| --- | --- |{Environment.NewLine}| Value | Value |");
+
+    private void HeadingLevelMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        HeadingMenuPopup.IsOpen = false;
+        if (sender is Button { Tag: string prefix })
+        {
+            ApplyHeading(prefix);
+        }
+    }
+
+    private void ListMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        ListMenuPopup.IsOpen = false;
+        if (sender is Button { Tag: string mode })
+        {
+            ApplyListFormatting(mode);
+        }
     }
 }

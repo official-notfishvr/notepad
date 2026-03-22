@@ -170,6 +170,7 @@ public partial class MainWindow
         tab.IsLoading = false;
         tab.LoadingLabel = string.Empty;
         tab.LineEndingLabel = DetectTrackedLineEnding(sawCrLf, sawCr, sawLf);
+        AddRecentFile(path);
 
         if (GetActiveTab()?.Id == tab.Id)
         {
@@ -427,6 +428,7 @@ public partial class MainWindow
         tab.MarkdownPreviewCacheKey = null;
         tab.IsDirty = false;
         tab.EncodingLabel = "UTF-8";
+        AddRecentFile(path!);
         RenderTabs();
         UpdateTitle();
         RefreshActiveTabUi();
@@ -676,17 +678,18 @@ public partial class MainWindow
         {
             var tab = _tabs[i];
             var isActive = i == _activeTabIndex;
+            var isWindows11 = _appearanceMode == AppAppearanceMode.Windows11;
 
             var border = new Border
             {
-                Height = 34,
+                Height = isWindows11 ? 30 : 34,
                 MinWidth = 120,
-                MaxWidth = 200,
+                MaxWidth = isWindows11 ? 240 : 200,
                 Background = (Brush)FindResource(isActive ? "TabActiveBrush" : "TabInactiveBrush"),
-                CornerRadius = new CornerRadius(6, 6, 0, 0),
-                Padding = new Thickness(12, 0, 6, 0),
+                CornerRadius = isWindows11 ? new CornerRadius(8, 8, 0, 0) : new CornerRadius(6, 6, 0, 0),
+                Padding = isWindows11 ? new Thickness(14, 0, 8, 0) : new Thickness(12, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(0, 0, 2, 0),
+                Margin = isWindows11 ? new Thickness(0, 0, 4, 0) : new Thickness(0, 0, 2, 0),
             };
 
             if (!isActive)

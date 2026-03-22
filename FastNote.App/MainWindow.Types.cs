@@ -11,6 +11,12 @@ public partial class MainWindow
         Dark,
     }
 
+    private enum AppAppearanceMode
+    {
+        Classic,
+        Windows11,
+    }
+
     private sealed class DocumentTab
     {
         public Guid Id { get; set; }

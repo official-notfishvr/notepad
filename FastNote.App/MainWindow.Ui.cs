@@ -17,8 +17,15 @@ public partial class MainWindow
         return string.Equals(theme, "Light", StringComparison.OrdinalIgnoreCase) ? AppThemeMode.Light : AppThemeMode.Dark;
     }
 
+    private static AppAppearanceMode GetAppearanceModeFromSettings(string? appearanceMode)
+    {
+        return string.Equals(appearanceMode, "Windows11", StringComparison.OrdinalIgnoreCase) ? AppAppearanceMode.Windows11 : AppAppearanceMode.Classic;
+    }
+
     private void ApplySavedSettings()
     {
+        ApplyAppearanceMode(GetAppearanceModeFromSettings(_appSettings.AppearanceMode));
+        ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
         _statusBarVisible = _appSettings.StatusBarVisible;
         StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
 
@@ -44,11 +51,13 @@ public partial class MainWindow
     private void SaveSettings()
     {
         _appSettings.Theme = _themeMode == AppThemeMode.Light ? "Light" : "Dark";
+        _appSettings.AppearanceMode = _appearanceMode == AppAppearanceMode.Windows11 ? "Windows11" : "Classic";
         _appSettings.StatusBarVisible = _statusBarVisible;
         _appSettings.EditorFontFamily = _editorFontFamily.Source;
         _appSettings.EditorFontStyle = _editorFontStyle == FontStyles.Italic ? "Italic" : "Normal";
         _appSettings.EditorFontWeight = _editorFontWeight == FontWeights.Bold ? "Bold" : "Normal";
         _appSettings.EditorFontSize = EditorTextBox.FontSize;
+        _appSettings.RecentFiles = _recentFiles.ToList();
 
         AppSettingsStore.Save(_appSettings);
     }
@@ -64,10 +73,12 @@ public partial class MainWindow
             return;
         }
 
+        _appSettings.AppearanceMode = dialog.SelectedAppearanceMode;
         _appSettings.Theme = dialog.SelectedTheme;
         _appSettings.StatusBarVisible = dialog.ShowStatusBar;
         _appSettings.DefaultWordWrap = dialog.DefaultWordWrap;
 
+        ApplyAppearanceMode(GetAppearanceModeFromSettings(_appSettings.AppearanceMode));
         _statusBarVisible = _appSettings.StatusBarVisible;
         StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
 
@@ -141,6 +152,7 @@ public partial class MainWindow
             }
         }
 
+        CharacterCountText.Text = $"{tab?.LoadedCharacterCount ?? (EditorTextBox.Document?.TextLength ?? 0):N0} characters";
         LineEndingText.Text = tab?.LineEndingLabel ?? "Windows (CRLF)";
         EncodingText.Text = tab?.EncodingLabel ?? "UTF-8";
 
@@ -187,6 +199,44 @@ public partial class MainWindow
         FileMenuPopup.IsOpen = false;
         EditMenuPopup.IsOpen = false;
         ViewMenuPopup.IsOpen = false;
+        HeadingMenuPopup.IsOpen = false;
+        ListMenuPopup.IsOpen = false;
+    }
+
+    private void ApplyAppearanceMode(AppAppearanceMode appearanceMode)
+    {
+        _appearanceMode = appearanceMode;
+        var isWindows11 = appearanceMode == AppAppearanceMode.Windows11;
+
+        ClassicMenuRow.Visibility = isWindows11 ? Visibility.Collapsed : Visibility.Visible;
+        Windows11MenuRow.Visibility = isWindows11 ? Visibility.Visible : Visibility.Collapsed;
+
+        FindPanel.Margin = new Thickness(68, 8, 68, 10);
+        FindPanel.Background = GetResourceBrush("PopupBackgroundBrush", Colors.Transparent);
+        FindPanel.BorderThickness = new Thickness(1);
+        FindPanel.CornerRadius = new CornerRadius(12);
+        FindPanel.VerticalAlignment = VerticalAlignment.Top;
+        FindPanel.HorizontalAlignment = HorizontalAlignment.Center;
+        FindPanel.Width = 860;
+
+        UpdateFindPanelControls();
+        RenderTabs();
+        UpdateStatusBar();
+    }
+
+    private void UpdateFindPanelControls()
+    {
+        FindOptionsButton.Visibility = Visibility.Visible;
+        FindExpandButton.Visibility = Visibility.Visible;
+        FindOptionsRow.Visibility = _findOptionsVisible ? Visibility.Visible : Visibility.Collapsed;
+        ReplaceRowPanel.Visibility = _replaceVisible ? Visibility.Visible : Visibility.Collapsed;
+        FindExpandButton.ToolTip = _replaceVisible ? "Hide replace" : "Show replace";
+        FindExpandButton.Content = new TextBlock
+        {
+            FontFamily = new FontFamily("Segoe Fluent Icons"),
+            FontSize = 10,
+            Text = _replaceVisible ? "\uE70E" : "\uE70D",
+        };
     }
 
     private void ApplyTheme(AppThemeMode themeMode)
@@ -195,8 +245,8 @@ public partial class MainWindow
         var dark = themeMode == AppThemeMode.Dark;
 
         SetBrush("WindowBackgroundBrush", dark ? "#FF1C1C1C" : "#FFF3F3F3");
-        SetBrush("ChromeBrush", dark ? "#FF282828" : "#FFE9E9E9");
-        SetBrush("MenuBrush", dark ? "#FF282828" : "#FFE9E9E9");
+        SetBrush("ChromeBrush", dark ? (_appearanceMode == AppAppearanceMode.Windows11 ? "#FF19003A" : "#FF282828") : "#FFE9E9E9");
+        SetBrush("MenuBrush", dark ? (_appearanceMode == AppAppearanceMode.Windows11 ? "#FF281C49" : "#FF282828") : "#FFE9E9E9");
         SetBrush("SurfaceBrush", dark ? "#FF282828" : "#FFFFFFFF");
         SetBrush("SurfaceRaisedBrush", dark ? "#FF323232" : "#FFF3F3F3");
         SetBrush("EditorBackgroundBrush", dark ? "#FF1C1C1C" : "#FFFFFFFF");
@@ -227,6 +277,7 @@ public partial class MainWindow
         SetBrush("ScrollTrackBrush", dark ? "#14FFFFFF" : "#14000000");
         SetBrush("FindHighlightBrush", dark ? "#FF60CDFF" : "#FF0067C0");
         SetBrush("FindHighlightForegroundBrush", dark ? "#FF000000" : "#FFFFFFFF");
+        SetBrush("AppIconBackgroundBrush", dark ? "#FF1F56D8" : "#FF0F6CBD");
         var activeTab = GetActiveTab();
         if (activeTab is not null)
         {
@@ -235,6 +286,47 @@ public partial class MainWindow
         RenderTabs();
         EditorTextBox.TextArea.TextView.Redraw();
         RefreshMarkdownPreview(activeTab);
+    }
+
+    private void RebuildRecentFilesMenu()
+    {
+        RecentFilesPanel.Children.Clear();
+        RecentFilesExpander.Visibility = _recentFiles.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var path in _recentFiles)
+        {
+            var button = new Button
+            {
+                Style = (Style)FindResource("PopupRowButtonStyle"),
+                Tag = path,
+                Content = new TextBlock
+                {
+                    Text = path,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    MaxWidth = 210,
+                },
+            };
+
+            button.Click += RecentFileButton_OnClick;
+            RecentFilesPanel.Children.Add(button);
+        }
+    }
+
+    private void AddRecentFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        _recentFiles.RemoveAll(existing => string.Equals(existing, path, StringComparison.OrdinalIgnoreCase));
+        _recentFiles.Insert(0, path);
+        if (_recentFiles.Count > 10)
+        {
+            _recentFiles.RemoveRange(10, _recentFiles.Count - 10);
+        }
+
+        RebuildRecentFilesMenu();
+        SaveSettings();
     }
 
     private void SetBrush(string key, string hexColor)
@@ -281,6 +373,18 @@ public partial class MainWindow
     {
         FileMenuPopup.IsOpen = false;
         await SaveDocumentAsync(GetActiveTab(), saveAs: true);
+    }
+
+    private async void SaveAllMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        FileMenuPopup.IsOpen = false;
+        foreach (var tab in _tabs.ToArray())
+        {
+            if (tab.IsDirty && !await SaveDocumentAsync(tab, saveAs: false))
+            {
+                break;
+            }
+        }
     }
 
     private async void ExitMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -351,6 +455,30 @@ public partial class MainWindow
     {
         EditMenuPopup.IsOpen = false;
         EditorTextBox.Paste();
+    }
+
+    private void DeleteMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        EditMenuPopup.IsOpen = false;
+        EditorTextBox.SelectedText = string.Empty;
+    }
+
+    private void SearchWithBingMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        EditMenuPopup.IsOpen = false;
+        var query = string.IsNullOrWhiteSpace(EditorTextBox.SelectedText) ? EditorTextBox.TextArea.Selection.GetText() : EditorTextBox.SelectedText;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo($"https://www.bing.com/search?q={Uri.EscapeDataString(query)}") { UseShellExecute = true });
+    }
+
+    private void ClearFormattingMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        EditMenuPopup.IsOpen = false;
+        ClearMarkdownFormatting();
     }
 
     private void SelectAllMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -482,9 +610,26 @@ public partial class MainWindow
         FileMenuPopup.IsOpen = false;
         if (!string.IsNullOrWhiteSpace(Environment.ProcessPath))
         {
-            Process.Start(Environment.ProcessPath!);
+            Process.Start(new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = true });
         }
 
+        await Task.CompletedTask;
+    }
+
+    private async void NewMarkdownMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        FileMenuPopup.IsOpen = false;
+        CreateNewTabAndActivate();
+        var tab = GetActiveTab();
+        if (tab is null)
+        {
+            return;
+        }
+
+        tab.Title = "Untitled.md";
+        tab.IsMarkdownPreviewEnabled = false;
+        RenderTabs();
+        UpdateTitle();
         await Task.CompletedTask;
     }
 
@@ -509,6 +654,23 @@ public partial class MainWindow
         Close();
     }
 
+    private async void CloseTabMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        FileMenuPopup.IsOpen = false;
+        var activeTab = GetActiveTab();
+        if (activeTab is not null)
+        {
+            await CloseTabAsync(activeTab.Id);
+        }
+    }
+
+    private async void CloseWindowMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        FileMenuPopup.IsOpen = false;
+        CloseWindowButton_OnClick(sender, e);
+        await Task.CompletedTask;
+    }
+
     private void TitleBar_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (IsInteractiveTitleBarSource(e.OriginalSource as DependencyObject))
@@ -529,16 +691,30 @@ public partial class MainWindow
 
     private void Window_OnStateChanged(object? sender, EventArgs e) => UpdateWindowButtons();
 
-    private void FileMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(FileMenuPopup);
+    private void FileMenuButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        FileMenuPopup.PlacementTarget = _appearanceMode == AppAppearanceMode.Windows11 ? FileMenuButtonWindows11 : FileMenuButton;
+        TogglePopup(FileMenuPopup);
+    }
 
-    private void EditMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(EditMenuPopup);
+    private void EditMenuButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        EditMenuPopup.PlacementTarget = _appearanceMode == AppAppearanceMode.Windows11 ? EditMenuButtonWindows11 : EditMenuButton;
+        TogglePopup(EditMenuPopup);
+    }
 
-    private void ViewMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(ViewMenuPopup);
+    private void ViewMenuButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ViewMenuPopup.PlacementTarget = _appearanceMode == AppAppearanceMode.Windows11 ? ViewMenuButtonWindows11 : ViewMenuButton;
+        TogglePopup(ViewMenuPopup);
+    }
 
     private void TogglePopup(System.Windows.Controls.Primitives.Popup popup)
     {
         var shouldOpen = !popup.IsOpen;
         CloseMenus();
+        HeadingMenuPopup.IsOpen = false;
+        ListMenuPopup.IsOpen = false;
         popup.IsOpen = shouldOpen;
     }
 
@@ -562,9 +738,39 @@ public partial class MainWindow
     {
         FindPanel.Visibility = Visibility.Collapsed;
         _replaceVisible = false;
-        ReplaceRowPanel.Visibility = Visibility.Collapsed;
+        UpdateFindPanelControls();
         ResetFindHighlight();
         RemoveHighlightAdorner();
         EditorTextBox.Focus();
+    }
+
+    private void FindPanelOptionsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _replaceVisible = !_replaceVisible;
+        UpdateFindPanelControls();
+
+        if (_replaceVisible)
+        {
+            ReplaceTextBox.Focus();
+            ReplaceTextBox.SelectAll();
+            return;
+        }
+
+        FindTextBox.Focus();
+    }
+
+    private void FindPanelMoreOptionsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _findOptionsVisible = !_findOptionsVisible;
+        UpdateFindPanelControls();
+    }
+
+    private async void RecentFileButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        FileMenuPopup.IsOpen = false;
+        if (sender is Button { Tag: string path } && File.Exists(path))
+        {
+            await OpenFileAsync(path);
+        }
     }
 }

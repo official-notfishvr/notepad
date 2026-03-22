@@ -26,9 +26,9 @@
     <Grid>
         <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource WindowBackgroundBrush}">
             <DockPanel LastChildFill="True">
-                <Border DockPanel.Dock="Top" Background="{DynamicResource ChromeBrush}">
+                <Border x:Name="TopChrome" DockPanel.Dock="Top" Background="{DynamicResource ChromeBrush}">
                     <StackPanel>
-                        <Grid x:Name="TitleBar" Height="38" Background="Transparent" PreviewMouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
+                        <Grid x:Name="TitleBar" Height="40" Background="Transparent" PreviewMouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
@@ -36,11 +36,13 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Margin="12,0,8,0" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="15" Foreground="{DynamicResource MenuForegroundBrush}" Text="" />
+                            <Border x:Name="AppIconHost" Grid.Column="0" Width="28" Height="28" Margin="10,0,8,0" VerticalAlignment="Center" Background="{DynamicResource AppIconBackgroundBrush}" CornerRadius="4">
+                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="15" Foreground="{DynamicResource MenuForegroundBrush}" Text="" />
+                            </Border>
                             <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" CanContentScroll="False" VerticalAlignment="Bottom" Background="Transparent">
                                 <StackPanel x:Name="TabStripPanel" Orientation="Horizontal" />
                             </ScrollViewer>
-                            <Button x:Name="NewTabButton" Grid.Column="2" Style="{StaticResource ChromeButtonStyle}" Width="28" Height="28" Margin="6,0,0,0" Click="NewTabButton_OnClick" ToolTip="New tab (Ctrl+N)">
+                            <Button x:Name="NewTabButton" Grid.Column="2" Style="{StaticResource ChromeButtonStyle}" Width="32" Height="30" Margin="6,0,0,0" Click="NewTabButton_OnClick" ToolTip="New tab (Ctrl+N)">
                                 <TextBlock FontFamily="Segoe Fluent Icons" FontSize="11" Foreground="{DynamicResource MenuForegroundBrush}" Text="" />
                             </Button>
                             <Border Grid.Column="3" Background="Transparent" />
@@ -56,7 +58,7 @@
                                 </Button>
                             </StackPanel>
                         </Grid>
-                        <Border Height="36" Background="{DynamicResource MenuBrush}">
+                        <Border x:Name="ClassicMenuRow" Height="36" Background="{DynamicResource MenuBrush}">
                             <Grid Margin="8,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -73,20 +75,80 @@
                                 </StackPanel>
                             </Grid>
                         </Border>
+                        <Grid x:Name="Windows11MenuRow" Height="34" Margin="6,0,6,6" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="FileMenuButtonWindows11" Style="{StaticResource MenuTriggerButtonStyle}" Content="File" Click="FileMenuButton_OnClick" />
+                                <Button x:Name="EditMenuButtonWindows11" Style="{StaticResource MenuTriggerButtonStyle}" Content="Edit" Click="EditMenuButton_OnClick" />
+                                <Button x:Name="ViewMenuButtonWindows11" Style="{StaticResource MenuTriggerButtonStyle}" Content="View" Click="ViewMenuButton_OnClick" />
+                            </StackPanel>
+                            <StackPanel x:Name="MarkdownToolbar" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed">
+                                <Button x:Name="HeadingButton" Style="{StaticResource Windows11ToolbarButtonStyle}" Click="HeadingButton_OnClick">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="H1" FontSize="13" />
+                                        <TextBlock Margin="5,0,0,0" FontFamily="Segoe Fluent Icons" FontSize="9" Text="" />
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="ListButton" Style="{StaticResource Windows11ToolbarButtonStyle}" Click="ListButton_OnClick" ToolTip="List options">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="Segoe Fluent Icons" FontSize="12" Text="" />
+                                        <TextBlock Margin="5,0,0,0" FontFamily="Segoe Fluent Icons" FontSize="9" Text="" />
+                                    </StackPanel>
+                                </Button>
+                                <Button Style="{StaticResource Windows11ToolbarIconButtonStyle}" Click="BoldButton_OnClick" ToolTip="Bold">
+                                    <TextBlock FontWeight="Bold" Text="B" />
+                                </Button>
+                                <Button Style="{StaticResource Windows11ToolbarIconButtonStyle}" Click="ItalicButton_OnClick" ToolTip="Italic">
+                                    <TextBlock FontStyle="Italic" Text="I" />
+                                </Button>
+                                <Button Style="{StaticResource Windows11ToolbarIconButtonStyle}" Click="StrikeButton_OnClick" ToolTip="Strikethrough">
+                                    <TextBlock TextDecorations="Strikethrough" Text="S" />
+                                </Button>
+                                <Button Style="{StaticResource Windows11ToolbarIconButtonStyle}" Click="LinkButton_OnClick" ToolTip="Insert link">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="12" Text="" />
+                                </Button>
+                                <Button Style="{StaticResource Windows11ToolbarIconButtonStyle}" Click="TableButton_OnClick" ToolTip="Table">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="12" Text="" />
+                                </Button>
+                                <Button x:Name="Windows11MarkdownPreviewToolbarButton" Style="{StaticResource Windows11ToolbarButtonStyle}" Padding="10,0" Click="MarkdownPreviewMenuItem_OnClick" ToolTip="Toggle markdown preview">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="Segoe Fluent Icons" FontSize="12" Text="" />
+                                        <TextBlock x:Name="Windows11MarkdownPreviewText" Margin="6,0,0,0" Text="Preview" />
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
+                            <Button Grid.Column="2" Style="{StaticResource Windows11ToolbarIconButtonStyle}" Click="SettingsMenuItem_OnClick" ToolTip="Settings">
+                                <TextBlock FontFamily="Segoe Fluent Icons" FontSize="12" Text="" />
+                            </Button>
+                        </Grid>
                     </StackPanel>
                 </Border>
                 <Border x:Name="StatusChrome" DockPanel.Dock="Bottom" Background="{DynamicResource StatusBrush}">
-                    <StackPanel Orientation="Horizontal" Height="26" Margin="12,0">
-                        <TextBlock x:Name="CaretText" Style="{StaticResource StatusTextStyle}" Text="Ln 1, Col 1" />
-                        <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
-                        <TextBlock x:Name="SelectionText" Style="{StaticResource StatusTextStyle}" Visibility="Collapsed" />
-                        <Border x:Name="SelectionDivider" Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" Visibility="Collapsed" />
-                        <TextBlock x:Name="ZoomText" Style="{StaticResource StatusTextStyle}" Text="100%" />
-                        <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
-                        <TextBlock x:Name="LineEndingText" Style="{StaticResource StatusTextStyle}" Text="Windows (CRLF)" />
-                        <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
-                        <TextBlock x:Name="EncodingText" Style="{StaticResource StatusTextStyle}" Text="UTF-8" />
-                    </StackPanel>
+                    <Grid Height="26" Margin="12,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <TextBlock x:Name="CaretText" Style="{StaticResource StatusTextStyle}" Text="Ln 1, Col 1" />
+                            <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
+                            <TextBlock x:Name="SelectionText" Style="{StaticResource StatusTextStyle}" Visibility="Collapsed" />
+                            <Border x:Name="SelectionDivider" Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" Visibility="Collapsed" />
+                            <TextBlock x:Name="CharacterCountText" Style="{StaticResource StatusTextStyle}" Text="0 characters" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                            <TextBlock x:Name="ZoomText" Style="{StaticResource StatusTextStyle}" Text="100%" />
+                            <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
+                            <TextBlock x:Name="LineEndingText" Style="{StaticResource StatusTextStyle}" Text="Windows (CRLF)" />
+                            <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
+                            <TextBlock x:Name="EncodingText" Style="{StaticResource StatusTextStyle}" Text="UTF-8" />
+                        </StackPanel>
+                    </Grid>
                 </Border>
                 <Grid Background="{DynamicResource EditorBackgroundBrush}">
                     <Grid.RowDefinitions>
@@ -112,43 +174,49 @@
                             <TextBlock x:Name="LoadingText" Foreground="{DynamicResource AccentBrush}" FontSize="11" Text="Loading…" />
                         </Border>
                     </Grid>
-                    <Border x:Name="FindPanel" Grid.Row="1" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="12,8" Visibility="Collapsed">
+                    <Border x:Name="FindPanel" Grid.Row="1" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,12" Visibility="Collapsed" HorizontalAlignment="Center" Width="860">
                         <StackPanel>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="Find" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Width="56" />
-                                <Grid>
-                                    <TextBox x:Name="FindTextBox" Style="{StaticResource FindTextBoxStyle}" Width="260" TextChanged="FindTextBox_OnTextChanged" KeyDown="FindTextBox_OnKeyDown" AcceptsReturn="False" />
-                                    <TextBlock x:Name="MatchCountText" Foreground="{DynamicResource EditorMutedBrush}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,8,0" IsHitTestVisible="False" Visibility="Collapsed" />
+                            <Grid VerticalAlignment="Center">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="28" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="FindExpandButton" Style="{StaticResource Windows11ToolbarIconButtonStyle}" Width="28" Height="28" Margin="0,0,10,0" Click="FindPanelOptionsButton_OnClick" ToolTip="Show replace">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="10" Text="" />
+                                </Button>
+                                <Grid Grid.Column="1" Margin="12,0,0,0">
+                                    <TextBox x:Name="FindTextBox" Style="{StaticResource FindTextBoxStyle}" TextChanged="FindTextBox_OnTextChanged" KeyDown="FindTextBox_OnKeyDown" AcceptsReturn="False" />
+                                    <TextBlock x:Name="MatchCountText" Foreground="{DynamicResource EditorMutedBrush}" FontSize="11" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,30,0" IsHitTestVisible="False" Visibility="Collapsed" />
+                                    <TextBlock HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" FontFamily="Segoe Fluent Icons" FontSize="12" Foreground="{DynamicResource EditorMutedBrush}" Text="" />
                                 </Grid>
-                                <Button Style="{StaticResource FindActionButtonStyle}" Width="32" Padding="0" Margin="4,0,0,0" Click="FindPreviousButton_OnClick" ToolTip="Previous (Shift+F3)">
-                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="13" Text="" />
+                                <Button x:Name="FindOptionsButton" Grid.Column="2" Style="{StaticResource Windows11ToolbarIconButtonStyle}" Width="28" Height="28" Margin="12,0,0,0" Click="FindPanelMoreOptionsButton_OnClick" ToolTip="Search options">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="13" Text="" />
                                 </Button>
-                                <Button Style="{StaticResource FindActionButtonStyle}" Width="32" Padding="0" Margin="3,0,0,0" Click="FindNextButton_OnClick" ToolTip="Next (F3)">
-                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="13" Text="" />
-                                </Button>
-                                <CheckBox x:Name="MatchCaseCheckBox" Content="Match case" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="12,0,0,0" />
-                                <CheckBox x:Name="WholeWordCheckBox" Content="Whole word" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="10,0,0,0" />
-                                <CheckBox x:Name="UseRegexCheckBox" Content="Regex" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="10,0,0,0" />
-                                <CheckBox
-                                    x:Name="HighlightAllCheckBox"
-                                    Content="Highlight all"
-                                    Foreground="{DynamicResource MenuForegroundBrush}"
-                                    FontSize="12"
-                                    VerticalAlignment="Center"
-                                    Focusable="False"
-                                    Margin="10,0,0,0"
-                                    Checked="HighlightAllCheckBox_OnChecked"
-                                    Unchecked="HighlightAllCheckBox_OnUnchecked"
-                                />
-                                <Button Style="{StaticResource FindActionButtonStyle}" Width="32" Padding="0" Margin="14,0,0,0" Focusable="False" Click="CloseFindPanelButton_OnClick" ToolTip="Close (Escape)">
+                                <Button Grid.Column="3" Style="{StaticResource Windows11ToolbarIconButtonStyle}" Width="28" Height="28" Margin="8,0,0,0" Focusable="False" Click="CloseFindPanelButton_OnClick" ToolTip="Close (Escape)">
                                     <TextBlock FontFamily="Segoe Fluent Icons" FontSize="11" Text="" />
                                 </Button>
-                            </StackPanel>
-                            <StackPanel x:Name="ReplaceRowPanel" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,6,0,0" Visibility="Collapsed">
-                                <TextBlock Text="Replace" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Width="56" />
-                                <TextBox x:Name="ReplaceTextBox" Style="{StaticResource FindTextBoxStyle}" Width="260" />
-                                <Button Style="{StaticResource FindActionButtonStyle}" Content="Replace" Focusable="False" Margin="4,0,0,0" Click="ReplaceOneButton_OnClick" />
-                                <Button Style="{StaticResource FindActionButtonStyle}" Content="Replace all" Focusable="False" Margin="4,0,0,0" Click="ReplaceAllButton_OnClick" />
+                            </Grid>
+                            <Grid x:Name="ReplaceRowPanel" VerticalAlignment="Center" Margin="0,8,0,0" Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" />
+                                <TextBox x:Name="ReplaceTextBox" Grid.Column="1" Style="{StaticResource FindTextBoxStyle}" Margin="12,0,0,0" />
+                                <Button Grid.Column="2" Style="{StaticResource FindActionButtonStyle}" Content="Replace" Focusable="False" Margin="12,0,0,0" Click="ReplaceOneButton_OnClick" />
+                                <Button Grid.Column="3" Style="{StaticResource FindActionButtonStyle}" Content="Replace all" Focusable="False" Margin="8,0,0,0" Click="ReplaceAllButton_OnClick" />
+                            </Grid>
+                            <StackPanel x:Name="FindOptionsRow" Orientation="Horizontal" Margin="38,8,0,0" Visibility="Collapsed">
+                                <CheckBox x:Name="MatchCaseCheckBox" Content="Match case" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" />
+                                <CheckBox x:Name="WholeWordCheckBox" Content="Whole word" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="12,0,0,0" />
+                                <CheckBox x:Name="UseRegexCheckBox" Content="Regex" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="12,0,0,0" />
+                                <CheckBox x:Name="HighlightAllCheckBox" Content="Highlight all" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="12,0,0,0" Checked="HighlightAllCheckBox_OnChecked" Unchecked="HighlightAllCheckBox_OnUnchecked" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -156,7 +224,7 @@
             </DockPanel>
         </Border>
         <Popup x:Name="FileMenuPopup" PlacementTarget="{Binding ElementName=FileMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-            <Border Style="{StaticResource PopupBorderStyle}" Width="230">
+            <Border Style="{StaticResource PopupBorderStyle}" Width="248">
                 <StackPanel>
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="NewFileMenuItem_OnClick">
                         <Grid>
@@ -164,7 +232,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="New" />
+                            <TextBlock Text="New tab" />
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+N" />
                         </Grid>
                     </Button>
@@ -178,6 +246,9 @@
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Shift+N" />
                         </Grid>
                     </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="NewMarkdownMenuItem_OnClick">
+                        <TextBlock Text="New Markdown tab" />
+                    </Button>
                     <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="OpenButton_OnClick">
                         <Grid>
@@ -185,10 +256,13 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Open…" />
+                            <TextBlock Text="Open" />
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+O" />
                         </Grid>
                     </Button>
+                    <Expander x:Name="RecentFilesExpander" Header="Recent" Margin="8,2" Background="Transparent" Foreground="{DynamicResource MenuForegroundBrush}">
+                        <StackPanel x:Name="RecentFilesPanel" Margin="0,4,0,4" />
+                    </Expander>
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="ReloadButton_OnClick">
                         <TextBlock Text="Reload from disk" />
                     </Button>
@@ -209,13 +283,23 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Save as…" />
+                            <TextBlock Text="Save as" />
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Shift+S" />
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="SaveAllMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Save all" />
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Alt+S" />
                         </Grid>
                     </Button>
                     <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="PageSetupMenuItem_OnClick">
-                        <TextBlock Text="Page setup…" />
+                        <TextBlock Text="Page setup" />
                     </Button>
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="PrintMenuItem_OnClick">
                         <Grid>
@@ -223,11 +307,31 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Print…" />
+                            <TextBlock Text="Print" />
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+P" />
                         </Grid>
                     </Button>
                     <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="CloseTabMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Close tab" />
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+W" />
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="CloseWindowMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Close window" />
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Shift+W" />
+                        </Grid>
+                    </Button>
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="ExitMenuItem_OnClick">
                         <TextBlock Text="Exit" />
                     </Button>
@@ -247,17 +351,6 @@
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Z" />
                         </Grid>
                     </Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="RedoMenuItem_OnClick">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Redo" />
-                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Y" />
-                        </Grid>
-                    </Button>
-                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="CutMenuItem_OnClick">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -288,15 +381,58 @@
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+V" />
                         </Grid>
                     </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="DeleteMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Delete" />
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Del" />
+                        </Grid>
+                    </Button>
                     <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="ClearFormattingMenuItem_OnClick">
+                        <TextBlock Text="Clear formatting" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="SearchWithBingMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Search with Bing" />
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+E" />
+                        </Grid>
+                    </Button>
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="FindButton_OnClick">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Find…" />
+                            <TextBlock Text="Find" />
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+F" />
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="FindNextMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Find next" />
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="F3" />
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="FindPreviousMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Find previous" />
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Shift+F3" />
                         </Grid>
                     </Button>
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="FindAndReplaceButton_OnClick">
@@ -305,7 +441,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Find and replace…" />
+                            <TextBlock Text="Replace" />
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+H" />
                         </Grid>
                     </Button>
@@ -315,7 +451,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Go to line…" />
+                            <TextBlock Text="Go to" />
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+G" />
                         </Grid>
                     </Button>
@@ -342,7 +478,7 @@
                     </Button>
                     <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="FontMenuItem_OnClick">
-                        <TextBlock Text="Font…" />
+                        <TextBlock Text="Font" />
                     </Button>
                 </StackPanel>
             </Border>
@@ -432,6 +568,29 @@
                             <TextBlock Grid.Column="1" Text="Dark theme" />
                         </Grid>
                     </Button>
+                </StackPanel>
+            </Border>
+        </Popup>
+        <Popup x:Name="HeadingMenuPopup" PlacementTarget="{Binding ElementName=HeadingButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Style="{StaticResource PopupBorderStyle}" Width="178">
+                <StackPanel>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="# " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="26" Text="Title" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="## " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="18" Text="Subtitle" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="### " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="16" Text="Heading" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="#### " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="14" Text="Subheading" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="##### " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="13" Text="Section" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="###### " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="12" Text="Subsection" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="" Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="12" Text="Body" /></Button>
+                </StackPanel>
+            </Border>
+        </Popup>
+        <Popup x:Name="ListMenuPopup" PlacementTarget="{Binding ElementName=ListButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+            <Border Style="{StaticResource PopupBorderStyle}" Width="178">
+                <StackPanel>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="bullet" Click="ListMenuItem_OnClick"><TextBlock Text="Bulleted list" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="number" Click="ListMenuItem_OnClick"><TextBlock Text="Numbered list" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="indent-more" Click="ListMenuItem_OnClick"><TextBlock Text="Increase indent" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="indent-less" Click="ListMenuItem_OnClick"><TextBlock Text="Decrease indent" /></Button>
                 </StackPanel>
             </Border>
         </Popup>

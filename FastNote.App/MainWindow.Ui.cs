@@ -79,7 +79,6 @@ public partial class MainWindow
 
         EditorTextBox.WordWrap = enabled;
         EditorTextBox.HorizontalScrollBarVisibility = enabled ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
-        DocumentViewportControl.WrapText = enabled;
     }
 
     private void UpdateWindowButtons()
@@ -91,7 +90,6 @@ public partial class MainWindow
     {
         var percent = EditorTextBox.FontSize / DefaultEditorFontSize * 100;
         ZoomText.Text = $"{percent:N0}%";
-        DocumentViewportControl.EditorFontSize = EditorTextBox.FontSize;
     }
 
     private void ZoomBy(int delta)

@@ -34,8 +34,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         ApplyTheme(AppThemeMode.Dark);
         UpdateWindowButtons();
-        DocumentViewportControl.TopLineChanged += (_, _) => UpdateStatusBar();
-        DocumentViewportControl.EditorFontSize = DefaultEditorFontSize;
         EditorTextBox.TextChanged += EditorTextBox_OnTextChanged;
         EditorTextBox.TextArea.SelectionChanged += EditorTextBox_OnSelectionChanged;
         EditorTextBox.TextArea.Caret.PositionChanged += (_, _) => EditorTextBox_OnSelectionChanged(EditorTextBox, EventArgs.Empty);

@@ -5,7 +5,6 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:avalonedit="http://icsharpcode.net/sharpdevelop/avalonedit"
-    xmlns:controls="clr-namespace:FastNote.App.Controls"
     xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
     mc:Ignorable="d"
     Title="Untitled - Notepad"
@@ -361,7 +360,6 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0">
-                        <controls:DocumentViewport x:Name="DocumentViewportControl" Visibility="Collapsed" Background="{DynamicResource EditorBackgroundBrush}" EditorFontSize="14" />
                         <avalonedit:TextEditor
                             x:Name="EditorTextBox"
                             Background="{DynamicResource EditorBackgroundBrush}"

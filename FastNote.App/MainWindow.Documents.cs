@@ -491,12 +491,7 @@ public partial class MainWindow
 
     private void UpdateEditorSurface(DocumentTab? tab)
     {
-        DocumentViewportControl.Visibility = Visibility.Collapsed;
         EditorTextBox.Visibility = Visibility.Visible;
-        if (DocumentViewportControl.Document is not null)
-        {
-            DocumentViewportControl.Document = null;
-        }
     }
 
     private void SetEditorTextFast(string value)

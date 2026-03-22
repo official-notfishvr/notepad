@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <Compile Remove="AssemblyInfo.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\FastNote.Core\FastNote.Core.csproj" />
   </ItemGroup>
 

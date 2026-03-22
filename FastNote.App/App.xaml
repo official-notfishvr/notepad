@@ -5,21 +5,35 @@
         <FontFamily x:Key="UiFont">Segoe UI Variable Text</FontFamily>
         <FontFamily x:Key="EditorFont">Consolas</FontFamily>
 
-        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFF3F3F3" />
-        <SolidColorBrush x:Key="ChromeBrush" Color="#FFF7F7F7" />
-        <SolidColorBrush x:Key="MenuBrush" Color="#FFF8F8F8" />
-        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FFFFFFFF" />
-        <SolidColorBrush x:Key="EditorForegroundBrush" Color="#FF1F1F1F" />
-        <SolidColorBrush x:Key="EditorMutedBrush" Color="#FF696969" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#FFE1E1E1" />
-        <SolidColorBrush x:Key="TabActiveBrush" Color="#FFFFFFFF" />
-        <SolidColorBrush x:Key="TabInactiveBrush" Color="#00FFFFFF" />
-        <SolidColorBrush x:Key="TabForegroundBrush" Color="#FF1F1F1F" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#FF0078D4" />
-        <SolidColorBrush x:Key="StatusBrush" Color="#FFF8F8F8" />
-        <SolidColorBrush x:Key="StatusForegroundBrush" Color="#FF4A4A4A" />
-        <SolidColorBrush x:Key="MenuForegroundBrush" Color="#FF1F1F1F" />
-        <SolidColorBrush x:Key="MenuSelectionBrush" Color="#FFEAEAEA" />
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF171520" />
+        <SolidColorBrush x:Key="ChromeBrush" Color="#FF160432" />
+        <SolidColorBrush x:Key="MenuBrush" Color="#FF241E3B" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FF2B2B2B" />
+        <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#FF343434" />
+        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FF292929" />
+        <SolidColorBrush x:Key="EditorForegroundBrush" Color="#FFF1F1F1" />
+        <SolidColorBrush x:Key="EditorMutedBrush" Color="#FFA7A0B8" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#FF3E3657" />
+        <SolidColorBrush x:Key="DividerBrush" Color="#FF4A425F" />
+        <SolidColorBrush x:Key="TabActiveBrush" Color="#FF272046" />
+        <SolidColorBrush x:Key="TabInactiveBrush" Color="#00000000" />
+        <SolidColorBrush x:Key="TabForegroundBrush" Color="#FFF1F1F1" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#FF7D68FF" />
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#FF342B56" />
+        <SolidColorBrush x:Key="StatusBrush" Color="#FF241E3B" />
+        <SolidColorBrush x:Key="StatusForegroundBrush" Color="#FFE2DDF5" />
+        <SolidColorBrush x:Key="MenuForegroundBrush" Color="#FFF1F1F1" />
+        <SolidColorBrush x:Key="MenuSelectionBrush" Color="#FF3F365A" />
+        <SolidColorBrush x:Key="PopupBackgroundBrush" Color="#FF2F2F2F" />
+        <SolidColorBrush x:Key="PopupBorderBrush" Color="#FF3C3C3C" />
+        <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FF343434" />
+        <SolidColorBrush x:Key="InputBorderBrush" Color="#FF5A5A5A" />
+        <SolidColorBrush x:Key="InputFocusBrush" Color="#FF8A78FF" />
+        <SolidColorBrush x:Key="ButtonHoverBrush" Color="#FF4B4364" />
+        <SolidColorBrush x:Key="ButtonPressedBrush" Color="#FF5A5176" />
+        <SolidColorBrush x:Key="ScrollThumbBrush" Color="#FF6B657A" />
+        <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#FF867F97" />
+        <SolidColorBrush x:Key="ScrollTrackBrush" Color="#18211D2A" />
 
         <Style TargetType="Window">
             <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
@@ -27,20 +41,47 @@
             <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
         </Style>
 
-        <Style TargetType="Menu">
-            <Setter Property="Background" Value="{DynamicResource MenuBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
-        </Style>
-
-        <Style TargetType="MenuItem">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
-            <Setter Property="Padding" Value="10,4" />
-        </Style>
-
         <Style TargetType="StatusBar">
             <Setter Property="Background" Value="{DynamicResource StatusBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource StatusForegroundBrush}" />
+        </Style>
+
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource EditorForegroundBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
+        </Style>
+
+        <Style TargetType="PasswordBox">
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+        </Style>
+
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource ScrollTrackBrush}" />
+        </Style>
+
+        <Style TargetType="Thumb">
+            <Setter Property="Background" Value="{DynamicResource ScrollThumbBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbRoot"
+                                Margin="2"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6" />
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbRoot" Property="Background" Value="{DynamicResource ScrollThumbHoverBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Application.Resources>
 </Application>

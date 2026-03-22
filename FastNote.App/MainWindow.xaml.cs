@@ -12,32 +12,33 @@ namespace FastNote.App;
 public partial class MainWindow : Window
 {
     private const double DefaultEditorFontSize = 14;
+    private const int WordWrapSoftLimitCharacters = 300_000;
     private AppThemeMode _themeMode = AppThemeMode.Dark;
-    private string? _currentPath;
-    private bool _isDirty;
     private bool _isInternalUpdate;
+    private bool _statusBarVisible = true;
+    private bool _replaceVisible;
+    private readonly List<DocumentTab> _tabs = [];
+    private int _activeTabIndex = -1;
 
     public MainWindow()
     {
         InitializeComponent();
         ApplyTheme(AppThemeMode.Dark);
-        ConfigureWordWrap();
-        UpdateTitle();
         UpdateWindowButtons();
-        UpdateStatusBar();
+        AddNewTab();
         EditorTextBox.Focus();
     }
 
     public async Task OpenFileAsync(string path)
     {
-        if (!await ConfirmDiscardChangesAsync())
+        if (!await ConfirmDiscardChangesAsync(GetActiveTab()))
         {
             return;
         }
 
         try
         {
-            await LoadFileIntoEditorAsync(path);
+            await LoadFileIntoActiveTabAsync(path);
         }
         catch (Exception ex)
         {
@@ -46,42 +47,75 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task LoadFileIntoEditorAsync(string path)
+    private async Task LoadFileIntoActiveTabAsync(string path)
     {
+        var tab = GetActiveTab();
+        if (tab is null)
+        {
+            return;
+        }
+
+        tab.LoadVersion++;
+        var loadVersion = tab.LoadVersion;
+        tab.IsLoading = true;
+        tab.LoadingLabel = "Loading...";
         _isInternalUpdate = true;
         EditorTextBox.Clear();
-        _currentPath = path;
-        _isDirty = false;
+        tab.Path = path;
+        tab.Text = string.Empty;
+        tab.IsDirty = false;
+        _isInternalUpdate = false;
+        UpdateLoadingUi();
         UpdateTitle();
+        RenderTabs();
         UpdateStatusBar();
-
-        StreamingBadge.Visibility = Visibility.Visible;
-        LoadingText.Text = "Loading...";
 
         using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
         using var reader = new StreamReader(stream, Encoding.UTF8, true);
         var buffer = new char[32 * 1024];
+        var builder = new StringBuilder();
         int read;
         while ((read = await reader.ReadAsync(buffer.AsMemory(0, buffer.Length))) > 0)
         {
-            EditorTextBox.AppendText(new string(buffer, 0, read));
-            LoadingText.Text = $"Loading... {stream.Position * 100 / Math.Max(1, stream.Length):N0}%";
+            var chunk = new string(buffer, 0, read);
+            builder.Append(chunk);
+            tab.Text = builder.ToString();
+            tab.LoadingLabel = $"Loading... {stream.Position * 100 / Math.Max(1, stream.Length):N0}%";
+
+            if (GetActiveTab()?.Id == tab.Id && loadVersion == tab.LoadVersion)
+            {
+                _isInternalUpdate = true;
+                EditorTextBox.Text = tab.Text;
+                EditorTextBox.CaretIndex = Math.Min(EditorTextBox.CaretIndex, EditorTextBox.Text.Length);
+                _isInternalUpdate = false;
+                UpdateLoadingUi();
+                UpdateStatusBar();
+            }
+
             await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
         }
 
-        StreamingBadge.Visibility = Visibility.Collapsed;
-        EncodingText.Text = reader.CurrentEncoding.EncodingName.Contains("UTF-8", StringComparison.OrdinalIgnoreCase)
+        tab.IsLoading = false;
+        tab.LoadingLabel = string.Empty;
+        tab.EncodingLabel = reader.CurrentEncoding.EncodingName.Contains("UTF-8", StringComparison.OrdinalIgnoreCase)
             ? "UTF-8"
             : reader.CurrentEncoding.EncodingName;
-        _isInternalUpdate = false;
-        EditorTextBox.CaretIndex = 0;
-        EditorTextBox.Select(0, 0);
+        if (GetActiveTab()?.Id == tab.Id && loadVersion == tab.LoadVersion)
+        {
+            EncodingText.Text = tab.EncodingLabel;
+            EditorTextBox.CaretIndex = 0;
+            EditorTextBox.Select(0, 0);
+            UpdateLoadingUi();
+        }
+
+        RenderTabs();
+        UpdateTitle();
         UpdateStatusBar();
     }
 
-    private async Task<bool> ConfirmDiscardChangesAsync()
+    private async Task<bool> ConfirmDiscardChangesAsync(DocumentTab? tab)
     {
-        if (!_isDirty)
+        if (tab is null || !tab.IsDirty)
         {
             return true;
         }
@@ -100,15 +134,22 @@ public partial class MainWindow : Window
 
         if (result == MessageBoxResult.Yes)
         {
-            return await SaveCurrentDocumentAsync(false);
+            return await SaveDocumentAsync(tab, false);
         }
 
         return true;
     }
 
-    private async Task<bool> SaveCurrentDocumentAsync(bool saveAs)
+    private async Task<bool> SaveDocumentAsync(DocumentTab? tab, bool saveAs)
     {
-        var path = _currentPath;
+        if (tab is null)
+        {
+            return false;
+        }
+
+        CaptureActiveTabState();
+
+        var path = tab.Path;
         if (saveAs || string.IsNullOrWhiteSpace(path))
         {
             var dialog = new SaveFileDialog
@@ -125,20 +166,33 @@ public partial class MainWindow : Window
             path = dialog.FileName;
         }
 
-        await File.WriteAllTextAsync(path!, EditorTextBox.Text, new UTF8Encoding(false));
-        _currentPath = path;
-        _isDirty = false;
+        await File.WriteAllTextAsync(path!, tab.Text, new UTF8Encoding(false));
+        tab.Path = path;
+        tab.IsDirty = false;
         UpdateTitle();
+        RenderTabs();
         UpdateStatusBar();
         return true;
     }
 
     private void UpdateTitle()
     {
-        var displayName = string.IsNullOrWhiteSpace(_currentPath) ? "Untitled" : Path.GetFileName(_currentPath);
-        var dirtySuffix = _isDirty ? " •" : string.Empty;
+        var tab = GetActiveTab();
+        var displayName = tab is null || string.IsNullOrWhiteSpace(tab.Path) ? "Untitled" : Path.GetFileName(tab.Path);
+        var dirtySuffix = tab?.IsDirty == true ? " •" : string.Empty;
         Title = $"{displayName}{dirtySuffix} - Notepad";
-        TabTitleText.Text = displayName + dirtySuffix;
+    }
+
+    private void UpdateLoadingUi()
+    {
+        var tab = GetActiveTab();
+        var isLoading = tab?.IsLoading == true;
+        StreamingBadge.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+        LoadingText.Text = isLoading ? tab!.LoadingLabel : "Loading...";
+        if (tab is not null)
+        {
+            EncodingText.Text = tab.EncodingLabel;
+        }
     }
 
     private void UpdateStatusBar()
@@ -148,8 +202,11 @@ public partial class MainWindow : Window
         var column = EditorTextBox.CaretIndex - lineStart + 1;
         CaretText.Text = $"Ln {lineIndex + 1:N0}, Col {column:N0}";
         CharacterCountText.Text = $"{EditorTextBox.Text.Length:N0} characters";
-        DocumentModeText.Text = WordWrapMenuItem.IsChecked ? "Word wrap" : "Plain text";
+        var tab = GetActiveTab();
+        DocumentModeText.Text = tab?.WordWrapEnabled == true ? "Word wrap" : "Plain text";
         LineEndingText.Text = DetectLineEnding();
+        WordWrapCheckGlyph.Opacity = tab?.WordWrapEnabled == true ? 0.8 : 0;
+        StatusBarCheckGlyph.Opacity = _statusBarVisible ? 0.8 : 0;
         UpdateZoomStatus();
     }
 
@@ -170,8 +227,9 @@ public partial class MainWindow : Window
 
     private void ConfigureWordWrap()
     {
-        EditorTextBox.TextWrapping = WordWrapMenuItem.IsChecked ? TextWrapping.Wrap : TextWrapping.NoWrap;
-        EditorTextBox.HorizontalScrollBarVisibility = WordWrapMenuItem.IsChecked ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        var enabled = GetActiveTab()?.WordWrapEnabled == true;
+        EditorTextBox.TextWrapping = enabled ? TextWrapping.Wrap : TextWrapping.NoWrap;
+        EditorTextBox.HorizontalScrollBarVisibility = enabled ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
     }
 
     private void UpdateWindowButtons()
@@ -205,6 +263,170 @@ public partial class MainWindow : Window
         EditorTextBox.CaretIndex = index + value.Length;
     }
 
+    private DocumentTab? GetActiveTab()
+    {
+        return _activeTabIndex >= 0 && _activeTabIndex < _tabs.Count ? _tabs[_activeTabIndex] : null;
+    }
+
+    private void AddNewTab()
+    {
+        CaptureActiveTabState();
+        var tab = new DocumentTab
+        {
+            Id = Guid.NewGuid(),
+            Title = "Untitled",
+            Text = string.Empty,
+            EncodingLabel = "UTF-8"
+        };
+        _tabs.Add(tab);
+        SwitchToTab(_tabs.Count - 1);
+    }
+
+    private void CaptureActiveTabState()
+    {
+        var tab = GetActiveTab();
+        if (tab is null)
+        {
+            return;
+        }
+
+        tab.Text = EditorTextBox.Text;
+        tab.CaretIndex = EditorTextBox.CaretIndex;
+        tab.SelectionStart = EditorTextBox.SelectionStart;
+        tab.SelectionLength = EditorTextBox.SelectionLength;
+        tab.WordWrapEnabled = tab.WordWrapEnabled;
+    }
+
+    private void SwitchToTab(int index)
+    {
+        if (index < 0 || index >= _tabs.Count)
+        {
+            return;
+        }
+
+        CaptureActiveTabState();
+        _activeTabIndex = index;
+        var tab = _tabs[index];
+
+        _isInternalUpdate = true;
+        EditorTextBox.Text = tab.Text;
+        EncodingText.Text = tab.EncodingLabel;
+        _isInternalUpdate = false;
+
+        ConfigureWordWrap();
+        EditorTextBox.CaretIndex = Math.Min(tab.CaretIndex, EditorTextBox.Text.Length);
+        EditorTextBox.Select(Math.Min(tab.SelectionStart, EditorTextBox.Text.Length), Math.Min(tab.SelectionLength, Math.Max(0, EditorTextBox.Text.Length - EditorTextBox.SelectionStart)));
+        UpdateLoadingUi();
+        UpdateTitle();
+        RenderTabs();
+        UpdateStatusBar();
+        EditorTextBox.Focus();
+    }
+
+    private void RenderTabs()
+    {
+        TabStripPanel.Children.Clear();
+        for (var i = 0; i < _tabs.Count; i++)
+        {
+            var tab = _tabs[i];
+            var isActive = i == _activeTabIndex;
+            var border = new Border
+            {
+                Width = 244,
+                Height = 30,
+                Background = (Brush)FindResource(isActive ? "TabActiveBrush" : "TabInactiveBrush"),
+                CornerRadius = new CornerRadius(8, 8, 0, 0),
+                Padding = new Thickness(12, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Bottom,
+                Margin = new Thickness(0, 0, 4, 0)
+            };
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition());
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var titleButton = new Button
+            {
+                Background = Brushes.Transparent,
+                BorderBrush = Brushes.Transparent,
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Content = new TextBlock
+                {
+                    Text = tab.DisplayTitle,
+                    Foreground = (Brush)FindResource("TabForegroundBrush"),
+                    FontWeight = FontWeights.SemiBold,
+                    TextTrimming = TextTrimming.CharacterEllipsis
+                },
+                Tag = i
+            };
+            titleButton.Click += TabButton_OnClick;
+
+            var closeButton = new Button
+            {
+                Width = 22,
+                Height = 22,
+                Margin = new Thickness(8, 0, 0, 0),
+                Background = Brushes.Transparent,
+                BorderBrush = Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                Tag = tab.Id,
+                Content = new TextBlock
+                {
+                    Text = "\uE711",
+                    FontFamily = new FontFamily("Segoe Fluent Icons"),
+                    FontSize = 12,
+                    Foreground = (Brush)FindResource("EditorMutedBrush"),
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            closeButton.Click += TabCloseButton_OnClick;
+            Grid.SetColumn(closeButton, 1);
+
+            grid.Children.Add(titleButton);
+            grid.Children.Add(closeButton);
+            border.Child = grid;
+            TabStripPanel.Children.Add(border);
+        }
+    }
+
+    private async Task CloseTabAsync(Guid tabId)
+    {
+        var index = _tabs.FindIndex(t => t.Id == tabId);
+        if (index < 0)
+        {
+            return;
+        }
+
+        var tab = _tabs[index];
+        if (index == _activeTabIndex)
+        {
+            CaptureActiveTabState();
+        }
+
+        if (!await ConfirmDiscardChangesAsync(tab))
+        {
+            return;
+        }
+
+        _tabs.RemoveAt(index);
+        if (_tabs.Count == 0)
+        {
+            AddNewTab();
+            return;
+        }
+
+        if (_activeTabIndex >= _tabs.Count)
+        {
+            _activeTabIndex = _tabs.Count - 1;
+        }
+        else if (index < _activeTabIndex)
+        {
+            _activeTabIndex--;
+        }
+
+        SwitchToTab(Math.Max(0, _activeTabIndex));
+    }
+
     protected override async void OnPreviewKeyDown(KeyEventArgs e)
     {
         if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.N)
@@ -224,7 +446,7 @@ public partial class MainWindow : Window
         if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S)
         {
             e.Handled = true;
-            await SaveCurrentDocumentAsync(false);
+            await SaveDocumentAsync(GetActiveTab(), false);
             return;
         }
 
@@ -261,36 +483,48 @@ public partial class MainWindow : Window
 
     private async Task NewDocumentAsync()
     {
-        if (!await ConfirmDiscardChangesAsync())
+        if (!await ConfirmDiscardChangesAsync(GetActiveTab()))
         {
             return;
         }
 
         _isInternalUpdate = true;
         EditorTextBox.Clear();
-        _currentPath = null;
-        _isDirty = false;
+        var tab = GetActiveTab();
+        if (tab is not null)
+        {
+            tab.Path = null;
+            tab.Title = "Untitled";
+            tab.Text = string.Empty;
+            tab.IsDirty = false;
+            tab.EncodingLabel = "UTF-8";
+            tab.IsLoading = false;
+            tab.LoadingLabel = string.Empty;
+        }
         EncodingText.Text = "UTF-8";
         _isInternalUpdate = false;
+        UpdateLoadingUi();
         UpdateTitle();
+        RenderTabs();
         UpdateStatusBar();
     }
 
     private async void OpenButton_OnClick(object sender, RoutedEventArgs e) => await OpenWithDialogAsync();
     private async void ReloadButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (!string.IsNullOrWhiteSpace(_currentPath))
+        var tab = GetActiveTab();
+        if (!string.IsNullOrWhiteSpace(tab?.Path))
         {
-            await OpenFileAsync(_currentPath);
+            await OpenFileAsync(tab.Path!);
         }
     }
 
     private async void NewFileMenuItem_OnClick(object sender, RoutedEventArgs e) => await NewDocumentAsync();
-    private async void SaveMenuItem_OnClick(object sender, RoutedEventArgs e) => await SaveCurrentDocumentAsync(false);
-    private async void SaveAsMenuItem_OnClick(object sender, RoutedEventArgs e) => await SaveCurrentDocumentAsync(true);
+    private async void SaveMenuItem_OnClick(object sender, RoutedEventArgs e) => await SaveDocumentAsync(GetActiveTab(), false);
+    private async void SaveAsMenuItem_OnClick(object sender, RoutedEventArgs e) => await SaveDocumentAsync(GetActiveTab(), true);
     private async void ExitMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
-        if (await ConfirmDiscardChangesAsync())
+        if (await ConfirmDiscardChangesAsync(GetActiveTab()))
         {
             Close();
         }
@@ -304,8 +538,28 @@ public partial class MainWindow : Window
 
     private void WordWrapMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
+        var tab = GetActiveTab();
+        if (tab is null)
+        {
+            return;
+        }
+
+        if (!tab.WordWrapEnabled && EditorTextBox.Text.Length > WordWrapSoftLimitCharacters)
+        {
+            MessageBox.Show(
+                this,
+                "Word wrap is disabled for very large documents because WPF reflows the entire buffer and can freeze the window.\n\nSave smaller excerpts or reduce file size before enabling wrap.",
+                "FastNote",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            UpdateStatusBar();
+            return;
+        }
+
+        tab.WordWrapEnabled = !tab.WordWrapEnabled;
         ConfigureWordWrap();
         UpdateStatusBar();
+        ViewMenuPopup.IsOpen = false;
     }
 
     private void ZoomBy(int delta)
@@ -330,7 +584,10 @@ public partial class MainWindow : Window
 
     private void StatusBarMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
-        StatusChrome.Visibility = StatusBarMenuItem.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+        _statusBarVisible = !_statusBarVisible;
+        StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
+        UpdateStatusBar();
+        ViewMenuPopup.IsOpen = false;
     }
 
     private void LightThemeMenuItem_OnClick(object sender, RoutedEventArgs e) => ApplyTheme(AppThemeMode.Light);
@@ -342,24 +599,35 @@ public partial class MainWindow : Window
         _themeMode = themeMode;
         var dark = themeMode == AppThemeMode.Dark;
 
-        SetBrush("WindowBackgroundBrush", dark ? "#FF201A29" : "#FFF2F2F4");
-        SetBrush("ChromeBrush", dark ? "#FF170534" : "#FFEDE8FA");
-        SetBrush("MenuBrush", dark ? "#FF2A2147" : "#FFF5F0FF");
+        SetBrush("WindowBackgroundBrush", dark ? "#FF171520" : "#FFF3F1F8");
+        SetBrush("ChromeBrush", dark ? "#FF160432" : "#FFEEE9FA");
+        SetBrush("MenuBrush", dark ? "#FF241E3B" : "#FFF5F2FB");
+        SetBrush("SurfaceBrush", dark ? "#FF2B2B2B" : "#FFFFFFFF");
+        SetBrush("SurfaceRaisedBrush", dark ? "#FF343434" : "#FFF3F1F6");
         SetBrush("EditorBackgroundBrush", dark ? "#FF292929" : "#FFFFFFFF");
-        SetBrush("EditorForegroundBrush", dark ? "#FFF1F1F1" : "#FF1F1F1F");
-        SetBrush("EditorMutedBrush", dark ? "#FFA9A1BC" : "#FF696969");
-        SetBrush("BorderBrush", dark ? "#FF3A3155" : "#FFD9D2E8");
-        SetBrush("TabActiveBrush", dark ? "#FF2A2147" : "#FFFFFFFF");
+        SetBrush("EditorForegroundBrush", dark ? "#FFF1F1F1" : "#FF1E1D22");
+        SetBrush("EditorMutedBrush", dark ? "#FFA7A0B8" : "#FF706A7E");
+        SetBrush("BorderBrush", dark ? "#FF3E3657" : "#FFD8D0E8");
+        SetBrush("DividerBrush", dark ? "#FF4A425F" : "#FFE2DCEC");
+        SetBrush("TabActiveBrush", dark ? "#FF272046" : "#FFFFFFFF");
         SetBrush("TabInactiveBrush", dark ? "#00000000" : "#00000000");
-        SetBrush("TabForegroundBrush", dark ? "#FFF1F1F1" : "#FF1F1F1F");
-        SetBrush("AccentBrush", dark ? "#FF7D68FF" : "#FF5A43E6");
-        SetBrush("StatusBrush", dark ? "#FF2A2147" : "#FFF5F0FF");
-        SetBrush("StatusForegroundBrush", dark ? "#FFE2DDF5" : "#FF4A4A4A");
-        SetBrush("MenuForegroundBrush", dark ? "#FFF1F1F1" : "#FF1F1F1F");
-        SetBrush("MenuSelectionBrush", dark ? "#FF41355F" : "#FFEAEAEA");
-
-        LightThemeMenuItem.IsChecked = !dark;
-        DarkThemeMenuItem.IsChecked = dark;
+        SetBrush("TabForegroundBrush", dark ? "#FFF1F1F1" : "#FF1E1D22");
+        SetBrush("AccentBrush", dark ? "#FF7D68FF" : "#FF5E49D8");
+        SetBrush("AccentSoftBrush", dark ? "#FF342B56" : "#FFE6E1FA");
+        SetBrush("StatusBrush", dark ? "#FF241E3B" : "#FFF5F2FB");
+        SetBrush("StatusForegroundBrush", dark ? "#FFE2DDF5" : "#FF4D475C");
+        SetBrush("MenuForegroundBrush", dark ? "#FFF1F1F1" : "#FF1E1D22");
+        SetBrush("MenuSelectionBrush", dark ? "#FF3F365A" : "#FFE5DFF1");
+        SetBrush("PopupBackgroundBrush", dark ? "#FF2F2F2F" : "#FFFFFFFF");
+        SetBrush("PopupBorderBrush", dark ? "#FF3C3C3C" : "#FFD7D1E2");
+        SetBrush("InputBackgroundBrush", dark ? "#FF343434" : "#FFF7F6FA");
+        SetBrush("InputBorderBrush", dark ? "#FF5A5A5A" : "#FFCFC9DB");
+        SetBrush("InputFocusBrush", dark ? "#FF8A78FF" : "#FF6A57E6");
+        SetBrush("ButtonHoverBrush", dark ? "#FF4B4364" : "#FFE7E0F3");
+        SetBrush("ButtonPressedBrush", dark ? "#FF5A5176" : "#FFD9D0EB");
+        SetBrush("ScrollThumbBrush", dark ? "#FF6B657A" : "#FFC3BCD6");
+        SetBrush("ScrollThumbHoverBrush", dark ? "#FF867F97" : "#FF9E95B7");
+        SetBrush("ScrollTrackBrush", dark ? "#18211D2A" : "#10000000");
     }
 
     private static void SetBrush(string key, string hex)
@@ -369,6 +637,7 @@ public partial class MainWindow : Window
 
     private void HeadingButton_OnClick(object sender, RoutedEventArgs e) => WrapSelection(EditorTextBox, "# ", string.Empty);
     private void BulletListButton_OnClick(object sender, RoutedEventArgs e) => WrapSelection(EditorTextBox, "- ", string.Empty);
+    private void NumberedListButton_OnClick(object sender, RoutedEventArgs e) => WrapSelection(EditorTextBox, "1. ", string.Empty);
     private void ChecklistButton_OnClick(object sender, RoutedEventArgs e) => WrapSelection(EditorTextBox, "[ ] ", string.Empty);
     private void BoldButton_OnClick(object sender, RoutedEventArgs e) => WrapSelection(EditorTextBox, "**", "**");
     private void ItalicButton_OnClick(object sender, RoutedEventArgs e) => WrapSelection(EditorTextBox, "_", "_");
@@ -386,27 +655,30 @@ public partial class MainWindow : Window
 
     private void FindButton_OnClick(object sender, RoutedEventArgs e)
     {
-        var query = Microsoft.VisualBasic.Interaction.InputBox("Find text:", "Find", string.Empty);
-        if (string.IsNullOrEmpty(query))
-        {
-            return;
-        }
-
-        var index = EditorTextBox.Text.IndexOf(query, EditorTextBox.CaretIndex, StringComparison.OrdinalIgnoreCase);
-        if (index < 0)
-        {
-            index = EditorTextBox.Text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (index >= 0)
-        {
-            EditorTextBox.Focus();
-            EditorTextBox.Select(index, query.Length);
-        }
+        FindPanel.Visibility = Visibility.Visible;
+        FindTextBox.Focus();
+        FindTextBox.SelectAll();
     }
 
-    private async void NewTabButton_OnClick(object sender, RoutedEventArgs e) => await NewDocumentAsync();
-    private async void CloseTabButton_OnClick(object sender, RoutedEventArgs e) => await NewDocumentAsync();
+    private void NewTabButton_OnClick(object sender, RoutedEventArgs e) => AddNewTab();
+    private async void CloseTabButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var tab = GetActiveTab();
+        if (tab is not null)
+        {
+            await CloseTabAsync(tab.Id);
+        }
+    }
+    private async void NewWindowMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var executable = Environment.ProcessPath;
+        if (!string.IsNullOrWhiteSpace(executable))
+        {
+            System.Diagnostics.Process.Start(executable);
+        }
+        await Task.CompletedTask;
+        FileMenuPopup.IsOpen = false;
+    }
 
     private void MinimizeButton_OnClick(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void MaxRestoreButton_OnClick(object sender, RoutedEventArgs e)
@@ -417,7 +689,7 @@ public partial class MainWindow : Window
 
     private async void CloseWindowButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (await ConfirmDiscardChangesAsync())
+        if (await ConfirmDiscardChangesAsync(GetActiveTab()))
         {
             Close();
         }
@@ -436,12 +708,71 @@ public partial class MainWindow : Window
 
     private void Window_OnStateChanged(object? sender, EventArgs e) => UpdateWindowButtons();
 
+    private void FileMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(FileMenuPopup);
+    private void EditMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(EditMenuPopup);
+    private void ViewMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(ViewMenuPopup);
+    private void HeadingMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(HeadingPopup);
+    private void ListMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(ListPopup);
+    private void TableMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(TablePopup);
+
+    private void TogglePopup(System.Windows.Controls.Primitives.Popup popup)
+    {
+        var shouldOpen = !popup.IsOpen;
+        FileMenuPopup.IsOpen = false;
+        EditMenuPopup.IsOpen = false;
+        ViewMenuPopup.IsOpen = false;
+        HeadingPopup.IsOpen = false;
+        ListPopup.IsOpen = false;
+        TablePopup.IsOpen = false;
+        popup.IsOpen = shouldOpen;
+    }
+
+    private void InsertTimeDateButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        InsertTextAtCaret(DateTime.Now.ToString("HH:mm M/d/yyyy"));
+        EditMenuPopup.IsOpen = false;
+    }
+
+    private void FontMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(this, "Font picker is not implemented yet.", "FastNote");
+        EditMenuPopup.IsOpen = false;
+    }
+
+    private void InsertTitleButton_OnClick(object sender, RoutedEventArgs e) { WrapSelection(EditorTextBox, "# ", string.Empty); HeadingPopup.IsOpen = false; }
+    private void InsertSubtitleButton_OnClick(object sender, RoutedEventArgs e) { WrapSelection(EditorTextBox, "## ", string.Empty); HeadingPopup.IsOpen = false; }
+    private void InsertHeadingButton_OnClick(object sender, RoutedEventArgs e) { WrapSelection(EditorTextBox, "### ", string.Empty); HeadingPopup.IsOpen = false; }
+    private void InsertSubheadingButton_OnClick(object sender, RoutedEventArgs e) { WrapSelection(EditorTextBox, "#### ", string.Empty); HeadingPopup.IsOpen = false; }
+    private void InsertSectionButton_OnClick(object sender, RoutedEventArgs e) { WrapSelection(EditorTextBox, "##### ", string.Empty); HeadingPopup.IsOpen = false; }
+    private void InsertSubsectionButton_OnClick(object sender, RoutedEventArgs e) { WrapSelection(EditorTextBox, "###### ", string.Empty); HeadingPopup.IsOpen = false; }
+    private void InsertBodyButton_OnClick(object sender, RoutedEventArgs e) { HeadingPopup.IsOpen = false; FileMenuPopup.IsOpen = false; }
+
+    private void TabButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: int index })
+        {
+            SwitchToTab(index);
+        }
+    }
+
+    private async void TabCloseButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: Guid id })
+        {
+            await CloseTabAsync(id);
+        }
+    }
+
     protected override async void OnClosing(CancelEventArgs e)
     {
-        if (!await ConfirmDiscardChangesAsync())
+        CaptureActiveTabState();
+        foreach (var tab in _tabs.ToArray())
         {
-            e.Cancel = true;
-            return;
+            if (!await ConfirmDiscardChangesAsync(tab))
+            {
+                e.Cancel = true;
+                return;
+            }
         }
 
         base.OnClosing(e);
@@ -454,8 +785,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        _isDirty = true;
+        var tab = GetActiveTab();
+        if (tab is not null)
+        {
+            tab.Text = EditorTextBox.Text;
+            tab.IsDirty = true;
+            tab.Title = string.IsNullOrWhiteSpace(tab.Path) ? "Untitled" : Path.GetFileName(tab.Path);
+        }
         UpdateTitle();
+        RenderTabs();
         UpdateStatusBar();
     }
 
@@ -485,5 +823,130 @@ public partial class MainWindow : Window
     {
         Light,
         Dark
+    }
+
+    private void CloseFindPanelButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        FindPanel.Visibility = Visibility.Collapsed;
+        _replaceVisible = false;
+        ReplaceTextBox.Visibility = Visibility.Collapsed;
+        ReplaceButtonPanel.Visibility = Visibility.Collapsed;
+        EditorTextBox.Focus();
+    }
+
+    private void ToggleReplaceButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _replaceVisible = !_replaceVisible;
+        ReplaceTextBox.Visibility = _replaceVisible ? Visibility.Visible : Visibility.Collapsed;
+        ReplaceButtonPanel.Visibility = _replaceVisible ? Visibility.Visible : Visibility.Collapsed;
+        if (_replaceVisible)
+        {
+            ReplaceTextBox.Focus();
+        }
+    }
+
+    private void FindTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(FindTextBox.Text))
+        {
+            FindNextInternal();
+        }
+    }
+
+    private void FindNextButton_OnClick(object sender, RoutedEventArgs e) => FindNextInternal();
+    private void FindPreviousButton_OnClick(object sender, RoutedEventArgs e) => FindPreviousInternal();
+
+    private void FindNextInternal()
+    {
+        var query = FindTextBox.Text;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return;
+        }
+
+        var start = EditorTextBox.SelectionStart + EditorTextBox.SelectionLength;
+        var index = EditorTextBox.Text.IndexOf(query, start, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+        {
+            index = EditorTextBox.Text.IndexOf(query, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (index >= 0)
+        {
+            EditorTextBox.Focus();
+            EditorTextBox.Select(index, query.Length);
+        }
+    }
+
+    private void FindPreviousInternal()
+    {
+        var query = FindTextBox.Text;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return;
+        }
+
+        var start = Math.Max(0, EditorTextBox.SelectionStart - 1);
+        var index = EditorTextBox.Text.LastIndexOf(query, start, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+        {
+            index = EditorTextBox.Text.LastIndexOf(query, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (index >= 0)
+        {
+            EditorTextBox.Focus();
+            EditorTextBox.Select(index, query.Length);
+        }
+    }
+
+    private void ReplaceOneButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var query = FindTextBox.Text;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return;
+        }
+
+        if (EditorTextBox.SelectionLength > 0 &&
+            string.Equals(EditorTextBox.SelectedText, query, StringComparison.OrdinalIgnoreCase))
+        {
+            EditorTextBox.SelectedText = ReplaceTextBox.Text;
+        }
+
+        FindNextInternal();
+    }
+
+    private void ReplaceAllButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var query = FindTextBox.Text;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return;
+        }
+
+        EditorTextBox.Text = System.Text.RegularExpressions.Regex.Replace(
+            EditorTextBox.Text,
+            System.Text.RegularExpressions.Regex.Escape(query),
+            ReplaceTextBox.Text,
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+    }
+
+    private sealed class DocumentTab
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = "Untitled";
+        public string? Path { get; set; }
+        public string Text { get; set; } = string.Empty;
+        public bool IsDirty { get; set; }
+        public bool WordWrapEnabled { get; set; }
+        public int CaretIndex { get; set; }
+        public int SelectionStart { get; set; }
+        public int SelectionLength { get; set; }
+        public string EncodingLabel { get; set; } = "UTF-8";
+        public bool IsLoading { get; set; }
+        public string LoadingLabel { get; set; } = string.Empty;
+        public int LoadVersion { get; set; }
+        public string DisplayTitle => (string.IsNullOrWhiteSpace(Path) ? Title : System.IO.Path.GetFileName(Path)) + (IsDirty ? " •" : string.Empty);
     }
 }

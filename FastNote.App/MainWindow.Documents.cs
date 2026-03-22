@@ -179,6 +179,7 @@ public partial class MainWindow
             tab.StreamedToEditorCharacterCount = tab.EditorDocument.TextLength;
             UpdateLoadingUi();
             UpdateStatusBar();
+            RefreshMarkdownPreview(tab);
         }
         else
         {
@@ -314,6 +315,7 @@ public partial class MainWindow
 
     private void ResetTabForLoad(DocumentTab tab, string path)
     {
+        var shouldKeepMarkdownPreview = tab.IsMarkdownPreviewEnabled;
         tab.Path = path;
         tab.Title = Path.GetFileName(path);
         tab.Text = string.Empty;
@@ -335,6 +337,8 @@ public partial class MainWindow
         tab.IsTextCacheReady = true;
         tab.IsHydratingText = false;
         tab.AutoActivateEditorWhenReady = false;
+        tab.IsMarkdownPreviewEnabled = shouldKeepMarkdownPreview && SupportsMarkdownPreview(tab);
+        tab.MarkdownPreviewCacheKey = null;
         CloseMenus();
         RenderTabs();
         UpdateTitle();
@@ -370,9 +374,9 @@ public partial class MainWindow
         {
             var dialog = new SaveFileDialog
             {
-                Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
-                DefaultExt = "txt",
-                FileName = string.IsNullOrWhiteSpace(path) ? "Untitled.txt" : Path.GetFileName(path),
+                Filter = "Markdown files (*.md)|*.md|Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                DefaultExt = SupportsMarkdownPreview(tab) ? "md" : "txt",
+                FileName = string.IsNullOrWhiteSpace(path) ? (SupportsMarkdownPreview(tab) ? "Untitled.md" : "Untitled.txt") : Path.GetFileName(path),
             };
 
             if (dialog.ShowDialog(this) != true)
@@ -419,6 +423,8 @@ public partial class MainWindow
 
         tab.Path = path;
         tab.Title = Path.GetFileName(path);
+        tab.IsMarkdownPreviewEnabled = tab.IsMarkdownPreviewEnabled && SupportsMarkdownPreview(tab);
+        tab.MarkdownPreviewCacheKey = null;
         tab.IsDirty = false;
         tab.EncodingLabel = "UTF-8";
         RenderTabs();
@@ -486,12 +492,20 @@ public partial class MainWindow
         UpdateTitle();
         UpdateLoadingUi();
         UpdateStatusBar();
+        UpdateMarkdownUi(tab);
         RenderTabs();
     }
 
     private void UpdateEditorSurface(DocumentTab? tab)
     {
-        EditorTextBox.Visibility = Visibility.Visible;
+        var showMarkdownPreview = IsMarkdownPreviewActive(tab);
+        MarkdownPreviewBrowser.Visibility = showMarkdownPreview ? Visibility.Visible : Visibility.Collapsed;
+        EditorTextBox.Visibility = showMarkdownPreview ? Visibility.Collapsed : Visibility.Visible;
+
+        if (showMarkdownPreview)
+        {
+            RefreshMarkdownPreview(tab);
+        }
     }
 
     private void SetEditorTextFast(string value)
@@ -528,6 +542,7 @@ public partial class MainWindow
         document.UndoStack.SizeLimit = 1_024;
         tab.EditorDocument = document;
         tab.Text = string.Empty;
+        tab.MarkdownPreviewCacheKey = null;
         return document;
     }
 
@@ -540,6 +555,7 @@ public partial class MainWindow
         UpdateEditorSurface(tab);
         UpdateLoadingUi();
         UpdateStatusBar();
+        UpdateMarkdownUi(tab);
         UpdateTitle();
     }
 

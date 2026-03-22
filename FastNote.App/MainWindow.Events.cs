@@ -168,6 +168,7 @@ public partial class MainWindow
         tab.Title = string.IsNullOrWhiteSpace(tab.Path) ? "Untitled" : Path.GetFileName(tab.Path);
         tab.LoadedCharacterCount = EditorTextBox.Document?.TextLength ?? 0;
         tab.LoadedLineCount = EditorTextBox.Document?.LineCount ?? 1;
+        tab.MarkdownPreviewCacheKey = null;
 
         if (!wasDirty)
         {
@@ -176,6 +177,7 @@ public partial class MainWindow
 
         UpdateTitle();
         UpdateStatusBar();
+        RefreshMarkdownPreview(tab);
 
         if (FindPanel.Visibility == Visibility.Visible)
         {

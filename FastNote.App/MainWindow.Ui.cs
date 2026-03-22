@@ -33,6 +33,7 @@ public partial class MainWindow
         var tab = GetActiveTab();
         WordWrapCheckGlyph.Opacity = tab?.WordWrapEnabled == true ? 0.85 : 0;
         StatusBarCheckGlyph.Opacity = _statusBarVisible ? 0.85 : 0;
+        UpdateMarkdownUi(tab);
 
         if (_themeMode == AppThemeMode.Light)
         {
@@ -45,25 +46,34 @@ public partial class MainWindow
             DarkThemeGlyph.Opacity = 0.85;
         }
 
-        var document = EditorTextBox.Document;
-        var documentLength = document?.TextLength ?? 0;
-        var caretOffset = Math.Clamp(EditorTextBox.CaretOffset, 0, documentLength);
-        var line = document is null ? null : document.GetLineByOffset(documentLength == 0 ? 0 : caretOffset);
-        var lineIndex = Math.Max(0, (line?.LineNumber ?? 1) - 1);
-        var column = line is null ? 1 : caretOffset - line.Offset + 1;
-
-        CaretText.Text = $"Ln {Math.Max(1, lineIndex + 1):N0}, Col {Math.Max(1, column):N0}";
-
-        if (EditorTextBox.SelectionLength > 0)
+        if (IsMarkdownPreviewActive(tab))
         {
-            SelectionText.Text = $"{EditorTextBox.SelectionLength:N0} characters selected";
-            SelectionText.Visibility = Visibility.Visible;
-            SelectionDivider.Visibility = Visibility.Visible;
+            CaretText.Text = "Markdown preview";
+            SelectionText.Visibility = Visibility.Collapsed;
+            SelectionDivider.Visibility = Visibility.Collapsed;
         }
         else
         {
-            SelectionText.Visibility = Visibility.Collapsed;
-            SelectionDivider.Visibility = Visibility.Collapsed;
+            var document = EditorTextBox.Document;
+            var documentLength = document?.TextLength ?? 0;
+            var caretOffset = Math.Clamp(EditorTextBox.CaretOffset, 0, documentLength);
+            var line = document is null ? null : document.GetLineByOffset(documentLength == 0 ? 0 : caretOffset);
+            var lineIndex = Math.Max(0, (line?.LineNumber ?? 1) - 1);
+            var column = line is null ? 1 : caretOffset - line.Offset + 1;
+
+            CaretText.Text = $"Ln {Math.Max(1, lineIndex + 1):N0}, Col {Math.Max(1, column):N0}";
+
+            if (EditorTextBox.SelectionLength > 0)
+            {
+                SelectionText.Text = $"{EditorTextBox.SelectionLength:N0} characters selected";
+                SelectionText.Visibility = Visibility.Visible;
+                SelectionDivider.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                SelectionText.Visibility = Visibility.Collapsed;
+                SelectionDivider.Visibility = Visibility.Collapsed;
+            }
         }
 
         LineEndingText.Text = tab?.LineEndingLabel ?? "Windows (CRLF)";
@@ -151,13 +161,28 @@ public partial class MainWindow
         SetBrush("ScrollTrackBrush", dark ? "#14FFFFFF" : "#14000000");
         SetBrush("FindHighlightBrush", dark ? "#FF60CDFF" : "#FF0067C0");
         SetBrush("FindHighlightForegroundBrush", dark ? "#FF000000" : "#FFFFFFFF");
+        var activeTab = GetActiveTab();
+        if (activeTab is not null)
+        {
+            activeTab.MarkdownPreviewCacheKey = null;
+        }
+        RenderTabs();
+        EditorTextBox.TextArea.TextView.Redraw();
+        RefreshMarkdownPreview(activeTab);
     }
 
     private void SetBrush(string key, string hexColor)
     {
+        var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hexColor));
+
+        if (Resources.Contains(key))
+        {
+            Resources[key] = brush;
+        }
+
         if (Application.Current.Resources.Contains(key))
         {
-            Application.Current.Resources[key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hexColor));
+            Application.Current.Resources[key] = brush;
         }
     }
 
@@ -327,6 +352,29 @@ public partial class MainWindow
     {
         ApplyTheme(_themeMode == AppThemeMode.Dark ? AppThemeMode.Light : AppThemeMode.Dark);
         UpdateStatusBar();
+    }
+
+    private void MarkdownPreviewMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        ViewMenuPopup.IsOpen = false;
+        var tab = GetActiveTab();
+        if (!SupportsMarkdownPreview(tab) || tab is null)
+        {
+            return;
+        }
+
+        tab.IsMarkdownPreviewEnabled = !tab.IsMarkdownPreviewEnabled;
+        UpdateEditorSurface(tab);
+        UpdateStatusBar();
+
+        if (tab.IsMarkdownPreviewEnabled)
+        {
+            RefreshMarkdownPreview(tab);
+        }
+        else
+        {
+            EditorTextBox.Focus();
+        }
     }
 
     private void InsertTimeDateButton_OnClick(object sender, RoutedEventArgs e)

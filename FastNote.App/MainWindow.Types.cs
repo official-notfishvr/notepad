@@ -41,6 +41,8 @@ public partial class MainWindow
         public bool IsTextCacheReady { get; set; }
         public bool IsHydratingText { get; set; }
         public bool AutoActivateEditorWhenReady { get; set; }
+        public bool IsMarkdownPreviewEnabled { get; set; }
+        public string? MarkdownPreviewCacheKey { get; set; }
 
         public string DisplayTitle
         {

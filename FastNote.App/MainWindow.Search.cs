@@ -467,7 +467,7 @@ public partial class MainWindow
 
     private Brush GetResourceBrush(string resourceKey, Color fallbackColor)
     {
-        return Application.Current.Resources[resourceKey] as Brush ?? new SolidColorBrush(fallbackColor);
+        return (Resources.Contains(resourceKey) ? Resources[resourceKey] as Brush : null) ?? (Application.Current.Resources.Contains(resourceKey) ? Application.Current.Resources[resourceKey] as Brush : null) ?? new SolidColorBrush(fallbackColor);
     }
 
     private static (int Count, int CurrentMatch) CountMatches(string text, string query, int currentSelectionStart, bool useRegex, bool matchCase, bool wholeWord, CancellationToken cancellationToken)

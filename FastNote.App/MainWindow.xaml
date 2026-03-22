@@ -335,6 +335,7 @@
                                     <Button x:Name="ViewMenuButton" Style="{StaticResource MenuTriggerButtonStyle}" Content="View" Click="ViewMenuButton_OnClick" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button x:Name="MarkdownPreviewToolbarButton" Style="{StaticResource MenuTriggerButtonStyle}" Padding="10,4" Content="Markdown preview" Click="MarkdownPreviewMenuItem_OnClick" ToolTip="Toggle markdown preview" Visibility="Collapsed" />
                                     <Button Style="{StaticResource MenuTriggerButtonStyle}" FontFamily="Segoe Fluent Icons" FontSize="14" Padding="8,4" Content="" Click="ThemeToggleToolbarButton_OnClick" ToolTip="Toggle theme" />
                                 </StackPanel>
                             </Grid>
@@ -360,6 +361,7 @@
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0">
+                        <WebBrowser x:Name="MarkdownPreviewBrowser" Visibility="Collapsed" />
                         <avalonedit:TextEditor
                             x:Name="EditorTextBox"
                             Background="{DynamicResource EditorBackgroundBrush}"
@@ -664,6 +666,16 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock x:Name="StatusBarCheckGlyph" FontFamily="Segoe Fluent Icons" FontSize="12" Text="" Opacity="0.85" VerticalAlignment="Center" />
                             <TextBlock Grid.Column="1" Text="Status bar" />
+                        </Grid>
+                    </Button>
+                    <Button x:Name="MarkdownPreviewMenuItem" Style="{StaticResource PopupRowButtonStyle}" Click="MarkdownPreviewMenuItem_OnClick" Visibility="Collapsed">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="MarkdownPreviewGlyph" FontFamily="Segoe Fluent Icons" FontSize="12" Text="" Opacity="0" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="Markdown preview" />
                         </Grid>
                     </Button>
                     <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />

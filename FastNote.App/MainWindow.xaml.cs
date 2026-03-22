@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using FastNote.Core;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -18,7 +19,7 @@ public partial class MainWindow : Window
 {
     private const double DefaultEditorFontSize = 14;
     private const int WordWrapSoftLimitCharacters = 300_000;
-    private const long LargeFileThresholdBytes = 8L * 1024 * 1024;
+    private const long LargeFileThresholdBytes = 1L * 1024 * 1024;
     private const int TabRetentionLimit = 12;
 
     private readonly List<DocumentTab> _tabs = [];
@@ -47,6 +48,7 @@ public partial class MainWindow : Window
         };
         _statusRefreshTimer.Tick += (_, _) => RefreshActiveTabUi();
         _statusRefreshTimer.Start();
+        PreviewViewport.TopLineChanged += PreviewViewport_OnTopLineChanged;
 
         CreateNewTabAndActivate();
         EditorTextBox.Focus();
@@ -83,13 +85,25 @@ public partial class MainWindow : Window
 
         try
         {
-            await LoadTabAsync(tab, path, loadVersion, tokenSource.Token);
+            if (ShouldUseLargeFilePreview(path))
+            {
+                await LoadLargePreviewTabAsync(tab, path, loadVersion, tokenSource.Token);
+            }
+            else
+            {
+                await LoadTabAsync(tab, path, loadVersion, tokenSource.Token);
+            }
         }
         catch (OperationCanceledException)
         {
+            if (tab.LoadVersion == loadVersion)
+            {
+                tab.LoadBuffer = null;
+            }
         }
         catch (Exception ex)
         {
+            tab.LoadBuffer = null;
             if (GetActiveTab()?.Id == tab.Id)
             {
                 MessageBox.Show(this, ex.Message, "Notepad", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -102,6 +116,8 @@ public partial class MainWindow : Window
             {
                 RefreshActiveTabUi();
             }
+
+            RenderTabs();
         }
         finally
         {
@@ -169,6 +185,7 @@ public partial class MainWindow : Window
                             EditorTextBox.AppendText(appendChunk);
                             _isInternalUpdate = false;
                             tab.StreamedToEditorCharacterCount = fullBuilder.Length;
+                            tab.PreviewText = EditorTextBox.Text;
                         }
                     },
                     DispatcherPriority.Background,
@@ -185,7 +202,6 @@ public partial class MainWindow : Window
                             {
                                 UpdateLoadingUi();
                                 UpdateStatusBar();
-                                RenderTabs();
                             }
                         },
                         DispatcherPriority.Background,
@@ -220,17 +236,18 @@ public partial class MainWindow : Window
                     UpdateTitle();
                     UpdateLoadingUi();
                     UpdateStatusBar();
-                    RenderTabs();
                 },
                 DispatcherPriority.Background,
                 cancellationToken);
         }
 
+        await Dispatcher.InvokeAsync(RenderTabs, DispatcherPriority.Background, cancellationToken);
         TrimInactiveTabMemory();
     }
 
     private void ResetTabForLoad(DocumentTab tab, string path)
     {
+        DisposePreviewDocument(tab);
         tab.Path = path;
         tab.Title = Path.GetFileName(path);
         tab.Text = string.Empty;
@@ -340,7 +357,16 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (tab.Mode == DocumentMode.Editable && !tab.IsLoading)
+        if (tab.Mode == DocumentMode.LargePreview)
+        {
+            tab.PreviewTopLine = PreviewViewport.TopLine;
+        }
+        else if (tab.IsLoading)
+        {
+            tab.PreviewText = EditorTextBox.Text;
+            tab.StreamedToEditorCharacterCount = tab.PreviewText.Length;
+        }
+        else if (tab.Mode == DocumentMode.Editable)
         {
             tab.Text = EditorTextBox.Text;
             tab.PreviewText = tab.Text;
@@ -348,18 +374,27 @@ public partial class MainWindow : Window
             tab.LoadedLineCount = CountVisibleLines(tab.Text);
         }
 
-        tab.CaretIndex = EditorTextBox.CaretIndex;
-        tab.SelectionStart = EditorTextBox.SelectionStart;
-        tab.SelectionLength = EditorTextBox.SelectionLength;
+        if (tab.Mode != DocumentMode.LargePreview)
+        {
+            tab.CaretIndex = EditorTextBox.CaretIndex;
+            tab.SelectionStart = EditorTextBox.SelectionStart;
+            tab.SelectionLength = EditorTextBox.SelectionLength;
+        }
+
         tab.LastActivatedUtc = DateTime.UtcNow;
     }
 
     private void PresentTab(DocumentTab tab, bool forceTextRefresh)
     {
         tab.LastActivatedUtc = DateTime.UtcNow;
-        var displayText = tab.IsLoading && tab.LoadBuffer is not null
-            ? tab.LoadBuffer.ToString()
-            : tab.Mode == DocumentMode.Editable ? tab.Text : tab.PreviewText;
+        if (tab.Mode == DocumentMode.LargePreview)
+        {
+            PresentLargePreviewTab(tab);
+            return;
+        }
+
+        ShowEditorSurface();
+        var displayText = GetDisplayText(tab);
 
         if (forceTextRefresh || !string.Equals(EditorTextBox.Text, displayText, StringComparison.Ordinal))
         {
@@ -394,7 +429,34 @@ public partial class MainWindow : Window
         UpdateLoadingUi();
         UpdateStatusBar();
         UpdateTitle();
-        RenderTabs();
+    }
+
+    private static string GetDisplayText(DocumentTab tab)
+    {
+        if (tab.IsLoading)
+        {
+            if (tab.LoadBuffer is null)
+            {
+                return tab.PreviewText;
+            }
+
+            var snapshotLength = Math.Min(tab.PreviewText.Length, tab.LoadBuffer.Length);
+            if (snapshotLength <= 0)
+            {
+                return string.Empty;
+            }
+
+            if (snapshotLength == tab.LoadBuffer.Length)
+            {
+                return tab.PreviewText;
+            }
+
+            return string.Concat(
+                tab.PreviewText,
+                tab.LoadBuffer.ToString(snapshotLength, tab.LoadBuffer.Length - snapshotLength));
+        }
+
+        return tab.Mode == DocumentMode.Editable ? tab.Text : tab.PreviewText;
     }
 
     private DocumentTab? GetActiveTab()
@@ -441,7 +503,15 @@ public partial class MainWindow : Window
         }
 
         PresentTab(tab, forceTextRefresh: true);
-        EditorTextBox.Focus();
+        if (tab.Mode == DocumentMode.LargePreview)
+        {
+            PreviewViewport.Focus();
+        }
+        else
+        {
+            EditorTextBox.Focus();
+        }
+
         TrimInactiveTabMemory();
     }
 
@@ -581,6 +651,7 @@ public partial class MainWindow : Window
         }
 
         CancelLoad(tab);
+        DisposePreviewDocument(tab);
         _tabs.RemoveAt(index);
 
         if (_tabs.Count == 0)
@@ -629,6 +700,7 @@ public partial class MainWindow : Window
         }
 
         CancelLoad(tab);
+        DisposePreviewDocument(tab);
         var replacement = CreateNewDocumentTab();
         var index = _tabs.IndexOf(tab);
         _tabs[index] = replacement;
@@ -656,6 +728,31 @@ public partial class MainWindow : Window
     private void UpdateStatusBar()
     {
         var tab = GetActiveTab();
+        if (tab?.Mode == DocumentMode.LargePreview)
+        {
+            CaretText.Text = $"Ln {Math.Max(1, PreviewViewport.TopLine + 1):N0}, Col 1";
+            SelectionText.Visibility = Visibility.Collapsed;
+            SelectionDivider.Visibility = Visibility.Collapsed;
+            LineEndingText.Text = tab.LineEndingLabel;
+            EncodingText.Text = tab.EncodingLabel;
+            WordWrapCheckGlyph.Opacity = 0;
+            StatusBarCheckGlyph.Opacity = _statusBarVisible ? 0.85 : 0;
+
+            if (_themeMode == AppThemeMode.Light)
+            {
+                LightThemeGlyph.Opacity = 0.85;
+                DarkThemeGlyph.Opacity = 0;
+            }
+            else
+            {
+                LightThemeGlyph.Opacity = 0;
+                DarkThemeGlyph.Opacity = 0.85;
+            }
+
+            UpdateZoomStatus();
+            return;
+        }
+
         var lineIndex = EditorTextBox.GetLineIndexFromCharacterIndex(EditorTextBox.CaretIndex);
         var lineStart = EditorTextBox.GetCharacterIndexFromLineIndex(lineIndex);
         var column = EditorTextBox.CaretIndex - lineStart + 1;
@@ -700,6 +797,7 @@ public partial class MainWindow : Window
         var enabled = GetActiveTab()?.WordWrapEnabled == true;
         EditorTextBox.TextWrapping = enabled ? TextWrapping.Wrap : TextWrapping.NoWrap;
         EditorTextBox.HorizontalScrollBarVisibility = enabled ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        PreviewViewport.WrapText = false;
     }
 
     private void UpdateWindowButtons()
@@ -709,13 +807,17 @@ public partial class MainWindow : Window
 
     private void UpdateZoomStatus()
     {
-        var percent = EditorTextBox.FontSize / DefaultEditorFontSize * 100;
+        var fontSize = IsPreviewSurfaceActive() ? PreviewViewport.EditorFontSize : EditorTextBox.FontSize;
+        var percent = fontSize / DefaultEditorFontSize * 100;
         ZoomText.Text = $"{percent:N0}%";
     }
 
     private void ZoomBy(int delta)
     {
-        EditorTextBox.FontSize = Math.Clamp(EditorTextBox.FontSize + delta, 6, 72);
+        var baseSize = IsPreviewSurfaceActive() ? PreviewViewport.EditorFontSize : EditorTextBox.FontSize;
+        var nextSize = Math.Clamp(baseSize + delta, 6, 72);
+        EditorTextBox.FontSize = nextSize;
+        PreviewViewport.EditorFontSize = nextSize;
         UpdateZoomStatus();
     }
 
@@ -1217,6 +1319,7 @@ public partial class MainWindow : Window
     {
         ViewMenuPopup.IsOpen = false;
         EditorTextBox.FontSize = DefaultEditorFontSize;
+        PreviewViewport.EditorFontSize = DefaultEditorFontSize;
         UpdateZoomStatus();
     }
 
@@ -1510,6 +1613,7 @@ public partial class MainWindow : Window
         foreach (var tab in _tabs)
         {
             CancelLoad(tab);
+            DisposePreviewDocument(tab);
         }
 
         _statusRefreshTimer.Stop();
@@ -1529,6 +1633,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        var wasDirty = tab.IsDirty;
         tab.Text = EditorTextBox.Text;
         tab.PreviewText = tab.Text;
         tab.IsDirty = true;
@@ -1536,6 +1641,12 @@ public partial class MainWindow : Window
         tab.LoadedCharacterCount = tab.Text.Length;
         tab.LoadedLineCount = CountVisibleLines(tab.Text);
         tab.LineEndingLabel = DetectLineEnding(tab.Text);
+
+        if (!wasDirty)
+        {
+            RenderTabs();
+        }
+
         RefreshActiveTabUi();
     }
 
@@ -1565,6 +1676,18 @@ public partial class MainWindow : Window
     {
         e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
+    }
+
+    private void PreviewViewport_OnTopLineChanged(object? sender, EventArgs e)
+    {
+        var tab = GetActiveTab();
+        if (tab?.Mode != DocumentMode.LargePreview)
+        {
+            return;
+        }
+
+        tab.PreviewTopLine = PreviewViewport.TopLine;
+        UpdateStatusBar();
     }
 
     private static long CountLineBreaks(string value)
@@ -1670,6 +1793,9 @@ public partial class MainWindow : Window
         public DocumentMode Mode { get; set; } = DocumentMode.Editable;
         public StringBuilder? LoadBuffer { get; set; }
         public int StreamedToEditorCharacterCount { get; set; }
+        public FileDocument? PreviewDocument { get; set; }
+        public EventHandler<FileLoadProgress>? PreviewProgressHandler { get; set; }
+        public long PreviewTopLine { get; set; }
 
         public string DisplayTitle
         {

@@ -1,5 +1,3 @@
-using FastNote.Core;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -14,19 +12,12 @@ public partial class MainWindow
         Dark
     }
 
-    private enum DocumentMode
-    {
-        Editable,
-        LargePreview
-    }
-
     private sealed class DocumentTab
     {
         public Guid Id { get; set; }
         public string Title { get; set; } = "Untitled";
         public string? Path { get; set; }
         public string Text { get; set; } = string.Empty;
-        public string PreviewText { get; set; } = string.Empty;
         public bool IsDirty { get; set; }
         public bool WordWrapEnabled { get; set; }
         public int CaretIndex { get; set; }
@@ -36,33 +27,19 @@ public partial class MainWindow
         public bool IsLoading { get; set; }
         public string LoadingLabel { get; set; } = string.Empty;
         public int LoadVersion { get; set; }
-        public bool IsReadOnly { get; set; }
-        public bool IsEditorBacked { get; set; }
-        public string ReadOnlyReason { get; set; } = string.Empty;
         public long LoadedCharacterCount { get; set; }
         public long LoadedLineCount { get; set; } = 1;
         public string LineEndingLabel { get; set; } = "Windows (CRLF)";
         public DateTime LastActivatedUtc { get; set; }
-        public DocumentMode Mode { get; set; } = DocumentMode.Editable;
-        public StringBuilder? LoadBuffer { get; set; }
         public int StreamedToEditorCharacterCount { get; set; }
-        public FileDocument? PreviewDocument { get; set; }
-        public EventHandler<FileLoadProgress>? PreviewProgressHandler { get; set; }
-        public long PreviewTopLine { get; set; }
-        public bool IsPreparingEditor { get; set; }
-        public bool IsPartialEdit { get; set; }
-        public long PartialEditStartLine { get; set; }
-        public int PartialEditLineCount { get; set; }
-        public long PartialEditStartOffset { get; set; }
-        public long PartialEditEndOffset { get; set; }
-        public Encoding? PartialEditEncoding { get; set; }
+        public bool IsEditorBacked { get; set; }
 
         public string DisplayTitle
         {
             get
             {
                 var name = string.IsNullOrWhiteSpace(Path) ? Title : System.IO.Path.GetFileName(Path);
-                var suffix = IsLoading ? "…" : IsDirty ? " ●" : string.Empty;
+                var suffix = IsLoading ? " \u2026" : IsDirty ? " \u25CF" : string.Empty;
                 return name + suffix;
             }
         }
@@ -85,7 +62,6 @@ public sealed class GoToLineDialog : Window
 
         var bg = Application.Current.Resources["PopupBackgroundBrush"] as Brush ?? Brushes.DarkGray;
         var fg = Application.Current.Resources["MenuForegroundBrush"] as Brush ?? Brushes.White;
-
         Background = bg;
 
         var grid = new Grid { Margin = new Thickness(16) };
@@ -112,7 +88,11 @@ public sealed class GoToLineDialog : Window
         _lineBox.SelectAll();
         Grid.SetRow(_lineBox, 1);
 
-        var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        var buttonPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right
+        };
         Grid.SetRow(buttonPanel, 2);
 
         var goButton = new Button
@@ -142,11 +122,9 @@ public sealed class GoToLineDialog : Window
 
         buttonPanel.Children.Add(goButton);
         buttonPanel.Children.Add(cancelButton);
-
         grid.Children.Add(label);
         grid.Children.Add(_lineBox);
         grid.Children.Add(buttonPanel);
-
         Content = grid;
 
         Loaded += (_, _) => _lineBox.Focus();
@@ -259,11 +237,9 @@ public sealed class FontPickerDialog : Window
 
         buttons.Children.Add(ok);
         buttons.Children.Add(cancel);
-
         outer.Children.Add(listsGrid);
         outer.Children.Add(_preview);
         outer.Children.Add(buttons);
-
         Content = outer;
         UpdatePreview();
     }

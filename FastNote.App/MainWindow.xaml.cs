@@ -8,9 +8,6 @@ public partial class MainWindow : Window
 {
     private const double DefaultEditorFontSize = 14;
     private const int WordWrapSoftLimitCharacters = 2_000_000;
-    private const long LargeFileThresholdBytes = 8L * 1024 * 1024;
-    private const int LoadReadBufferCharacters = 256 * 1024;
-    private const int UiAppendBatchCharacters = 512 * 1024;
     private const int TabRetentionLimit = 12;
 
     private readonly List<DocumentTab> _tabs = [];
@@ -35,11 +32,19 @@ public partial class MainWindow : Window
 
         _statusRefreshTimer = new DispatcherTimer(DispatcherPriority.Background)
         {
-            Interval = TimeSpan.FromMilliseconds(180)
+            Interval = TimeSpan.FromMilliseconds(400)
         };
-        _statusRefreshTimer.Tick += (_, _) => RefreshActiveTabUi();
+        _statusRefreshTimer.Tick += (_, _) =>
+        {
+            var tab = GetActiveTab();
+            if (tab is null || tab.IsLoading)
+            {
+                return;
+            }
+
+            RefreshActiveTabUi();
+        };
         _statusRefreshTimer.Start();
-        PreviewViewport.TopLineChanged += PreviewViewport_OnTopLineChanged;
 
         CreateNewTabAndActivate();
         EditorTextBox.Focus();

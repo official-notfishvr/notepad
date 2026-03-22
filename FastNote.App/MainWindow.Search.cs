@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -7,13 +9,10 @@ namespace FastNote.App;
 
 public partial class MainWindow
 {
+    private HighlightAllAdorner? _highlightAdorner;
+
     private void FindNextInternal()
     {
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
-        {
-            return;
-        }
-
         var query = FindTextBox.Text;
         if (string.IsNullOrEmpty(query))
         {
@@ -36,24 +35,18 @@ public partial class MainWindow
 
         if (index >= 0)
         {
-            EditorTextBox.Focus();
-            EditorTextBox.Select(index, query.Length);
-            EditorTextBox.ScrollToLine(EditorTextBox.GetLineIndexFromCharacterIndex(index));
-            ApplyFindHighlight();
+            ScrollToMatchAndSelect(index, query.Length);
         }
         else
         {
-            ResetFindHighlight();
+            FlashNotFound();
         }
+
+        RefreshHighlightAll();
     }
 
     private void FindPreviousInternal()
     {
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
-        {
-            return;
-        }
-
         var query = FindTextBox.Text;
         if (string.IsNullOrEmpty(query))
         {
@@ -76,15 +69,33 @@ public partial class MainWindow
 
         if (index >= 0)
         {
-            EditorTextBox.Focus();
-            EditorTextBox.Select(index, query.Length);
-            EditorTextBox.ScrollToLine(EditorTextBox.GetLineIndexFromCharacterIndex(index));
-            ApplyFindHighlight();
+            ScrollToMatchAndSelect(index, query.Length);
         }
         else
         {
-            ResetFindHighlight();
+            FlashNotFound();
         }
+
+        RefreshHighlightAll();
+    }
+
+    private void ScrollToMatchAndSelect(int index, int length)
+    {
+        EditorTextBox.Select(index, length);
+        EditorTextBox.ScrollToLine(EditorTextBox.GetLineIndexFromCharacterIndex(index));
+        ApplyFindHighlight();
+        UpdateMatchCountLabel();
+    }
+
+    private void FlashNotFound()
+    {
+        FindTextBox.Background = GetResourceBrush("FindNotFoundBrush", Color.FromArgb(0x55, 0xC4, 0x2B, 0x1C));
+        FindTextBox.Dispatcher.BeginInvoke(() =>
+        {
+            FindTextBox.Background = GetResourceBrush("InputBackgroundBrush", Color.FromArgb(0xFF, 0x33, 0x33, 0x33));
+        }, System.Windows.Threading.DispatcherPriority.Background);
+        ResetFindHighlight();
+        UpdateMatchCountLabel();
     }
 
     private static int FindWithOptions(string text, string query, int start, bool forward, StringComparison comparison, bool wholeWord)
@@ -146,6 +157,130 @@ public partial class MainWindow
         }
     }
 
+    private List<(int Start, int Length)> FindAllMatches(string text, string query)
+    {
+        var results = new List<(int, int)>();
+        if (string.IsNullOrEmpty(query))
+        {
+            return results;
+        }
+
+        try
+        {
+            if (UseRegexCheckBox.IsChecked == true)
+            {
+                var regex = new Regex(query, RegexOptions.Multiline);
+                foreach (Match m in regex.Matches(text))
+                {
+                    results.Add((m.Index, m.Length));
+                }
+            }
+            else
+            {
+                var comparison = MatchCaseCheckBox.IsChecked == true ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+                var wholeWord = WholeWordCheckBox.IsChecked == true;
+                var pos = 0;
+                while (pos < text.Length)
+                {
+                    var idx = text.IndexOf(query, pos, comparison);
+                    if (idx < 0)
+                    {
+                        break;
+                    }
+
+                    var valid = !wholeWord ||
+                        ((idx == 0 || !char.IsLetterOrDigit(text[idx - 1])) &&
+                         (idx + query.Length >= text.Length || !char.IsLetterOrDigit(text[idx + query.Length])));
+
+                    if (valid)
+                    {
+                        results.Add((idx, query.Length));
+                    }
+
+                    pos = idx + Math.Max(1, query.Length);
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        return results;
+    }
+
+    private void RefreshHighlightAll()
+    {
+        if (HighlightAllCheckBox.IsChecked != true)
+        {
+            RemoveHighlightAdorner();
+            return;
+        }
+
+        var query = FindTextBox.Text;
+        if (string.IsNullOrEmpty(query))
+        {
+            RemoveHighlightAdorner();
+            return;
+        }
+
+        var matches = FindAllMatches(EditorTextBox.Text, query);
+        var layer = AdornerLayer.GetAdornerLayer(EditorTextBox);
+        if (layer is null)
+        {
+            return;
+        }
+
+        RemoveHighlightAdorner();
+
+        if (matches.Count == 0)
+        {
+            return;
+        }
+
+        var highlightBrush = GetResourceBrush("HighlightAllBrush", Color.FromArgb(0x55, 0xFF, 0xD7, 0x00));
+        _highlightAdorner = new HighlightAllAdorner(EditorTextBox, matches, highlightBrush);
+        layer.Add(_highlightAdorner);
+    }
+
+    private void RemoveHighlightAdorner()
+    {
+        if (_highlightAdorner is null)
+        {
+            return;
+        }
+
+        var layer = AdornerLayer.GetAdornerLayer(EditorTextBox);
+        layer?.Remove(_highlightAdorner);
+        _highlightAdorner = null;
+    }
+
+    private void UpdateMatchCountLabel()
+    {
+        var query = FindTextBox.Text;
+        if (string.IsNullOrEmpty(query))
+        {
+            MatchCountText.Text = string.Empty;
+            MatchCountText.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var matches = FindAllMatches(EditorTextBox.Text, query);
+        if (matches.Count == 0)
+        {
+            MatchCountText.Text = "No results";
+        }
+        else
+        {
+            var currentSel = EditorTextBox.SelectionStart;
+            var currentMatch = matches.FindIndex(m => m.Start == currentSel) + 1;
+            MatchCountText.Text = currentMatch > 0
+                ? $"{currentMatch} of {matches.Count}"
+                : $"{matches.Count} matches";
+        }
+
+        MatchCountText.Visibility = Visibility.Visible;
+    }
+
     private void OpenFindPanel(bool showReplace)
     {
         FindPanel.Visibility = Visibility.Visible;
@@ -155,36 +290,21 @@ public partial class MainWindow
         FindTextBox.SelectAll();
     }
 
-    private async void FindButton_OnClick(object sender, RoutedEventArgs e)
+    private void FindButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (!await EnsureEditableTabAsync(GetActiveTab()))
-        {
-            return;
-        }
-
         EditMenuPopup.IsOpen = false;
         OpenFindPanel(showReplace: false);
     }
 
-    private async void FindAndReplaceButton_OnClick(object sender, RoutedEventArgs e)
+    private void FindAndReplaceButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (!await EnsureEditableTabAsync(GetActiveTab()))
-        {
-            return;
-        }
-
         EditMenuPopup.IsOpen = false;
         OpenFindPanel(showReplace: true);
     }
 
-    private async void GoToMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private void GoToMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-
-        if (!await EnsureEditableTabAsync(GetActiveTab()))
-        {
-            return;
-        }
 
         var dialog = new GoToLineDialog(EditorTextBox.GetLineIndexFromCharacterIndex(EditorTextBox.CaretIndex) + 1)
         {
@@ -203,16 +323,18 @@ public partial class MainWindow
         }
     }
 
-    private void FindTextBox_OnTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    private void FindTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
     {
-        if (!string.IsNullOrEmpty(FindTextBox.Text))
-        {
-            FindNextInternal();
-        }
-        else
+        if (string.IsNullOrEmpty(FindTextBox.Text))
         {
             ResetFindHighlight();
+            RemoveHighlightAdorner();
+            MatchCountText.Visibility = Visibility.Collapsed;
+            FindTextBox.Background = GetResourceBrush("InputBackgroundBrush", Color.FromArgb(0xFF, 0x33, 0x33, 0x33));
+            return;
         }
+
+        FindNextInternal();
     }
 
     private void FindTextBox_OnKeyDown(object sender, KeyEventArgs e)
@@ -232,17 +354,21 @@ public partial class MainWindow
         }
     }
 
+    private void HighlightAllCheckBox_OnChecked(object sender, RoutedEventArgs e)
+    {
+        RefreshHighlightAll();
+    }
+
+    private void HighlightAllCheckBox_OnUnchecked(object sender, RoutedEventArgs e)
+    {
+        RemoveHighlightAdorner();
+    }
+
     private void FindNextButton_OnClick(object sender, RoutedEventArgs e) => FindNextInternal();
     private void FindPreviousButton_OnClick(object sender, RoutedEventArgs e) => FindPreviousInternal();
 
     private void ReplaceOneButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
-        {
-            ShowLargeFileEditingMessage();
-            return;
-        }
-
         var query = FindTextBox.Text;
         if (string.IsNullOrEmpty(query))
         {
@@ -260,12 +386,6 @@ public partial class MainWindow
 
     private void ReplaceAllButton_OnClick(object sender, RoutedEventArgs e)
     {
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
-        {
-            ShowLargeFileEditingMessage();
-            return;
-        }
-
         var query = FindTextBox.Text;
         if (string.IsNullOrEmpty(query))
         {
@@ -295,6 +415,7 @@ public partial class MainWindow
         EditorTextBox.Text = newText;
         EditorTextBox.CaretIndex = Math.Min(caretPos, newText.Length);
         ResetFindHighlight();
+        RemoveHighlightAdorner();
     }
 
     private void ApplyFindHighlight()
@@ -310,12 +431,62 @@ public partial class MainWindow
 
     private void ResetFindHighlight()
     {
-        EditorTextBox.SelectionBrush = GetResourceBrush("AccentSoftBrush", Color.FromArgb(0x22, 0x00, 0x67, 0xC0));
+        EditorTextBox.SelectionBrush = GetResourceBrush("AccentSoftBrush", Color.FromArgb(0x1A, 0x00, 0x67, 0xC0));
         EditorTextBox.SelectionTextBrush = GetResourceBrush("EditorForegroundBrush", Colors.White);
     }
 
     private Brush GetResourceBrush(string resourceKey, Color fallbackColor)
     {
         return Application.Current.Resources[resourceKey] as Brush ?? new SolidColorBrush(fallbackColor);
+    }
+}
+
+internal sealed class HighlightAllAdorner : Adorner
+{
+    private readonly List<(int Start, int Length)> _matches;
+    private readonly Brush _brush;
+    private readonly TextBox _textBox;
+
+    public HighlightAllAdorner(TextBox textBox, List<(int Start, int Length)> matches, Brush brush)
+        : base(textBox)
+    {
+        _textBox = textBox;
+        _matches = matches;
+        _brush = brush;
+        IsHitTestVisible = false;
+    }
+
+    protected override void OnRender(DrawingContext dc)
+    {
+        foreach (var (start, length) in _matches)
+        {
+            if (start < 0 || start + length > _textBox.Text.Length)
+            {
+                continue;
+            }
+
+            try
+            {
+                var startRect = _textBox.GetRectFromCharacterIndex(start);
+                var endRect = _textBox.GetRectFromCharacterIndex(start + length);
+
+                if (startRect.IsEmpty || endRect.IsEmpty)
+                {
+                    continue;
+                }
+
+                if (Math.Abs(startRect.Top - endRect.Top) < 2)
+                {
+                    dc.DrawRectangle(_brush, null, new Rect(startRect.Left, startRect.Top, Math.Max(2, endRect.Left - startRect.Left), startRect.Height));
+                }
+                else
+                {
+                    dc.DrawRectangle(_brush, null, new Rect(startRect.Left, startRect.Top, Math.Max(2, _textBox.ActualWidth - startRect.Left - 4), startRect.Height));
+                }
+            }
+            catch
+            {
+            }
+        }
     }
 }

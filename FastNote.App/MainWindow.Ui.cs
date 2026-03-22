@@ -31,37 +31,12 @@ public partial class MainWindow
     private void UpdateStatusBar()
     {
         var tab = GetActiveTab();
-        if (tab?.Mode == DocumentMode.LargePreview)
-        {
-            CaretText.Text = $"Ln {Math.Max(1, PreviewViewport.TopLine + 1):N0}, Col 1";
-            SelectionText.Visibility = Visibility.Collapsed;
-            SelectionDivider.Visibility = Visibility.Collapsed;
-            LineEndingText.Text = tab.LineEndingLabel;
-            EncodingText.Text = tab.EncodingLabel;
-            WordWrapCheckGlyph.Opacity = 0;
-            StatusBarCheckGlyph.Opacity = _statusBarVisible ? 0.85 : 0;
-
-            if (_themeMode == AppThemeMode.Light)
-            {
-                LightThemeGlyph.Opacity = 0.85;
-                DarkThemeGlyph.Opacity = 0;
-            }
-            else
-            {
-                LightThemeGlyph.Opacity = 0;
-                DarkThemeGlyph.Opacity = 0.85;
-            }
-
-            UpdateZoomStatus();
-            return;
-        }
 
         var lineIndex = EditorTextBox.GetLineIndexFromCharacterIndex(EditorTextBox.CaretIndex);
         var lineStart = EditorTextBox.GetCharacterIndexFromLineIndex(lineIndex);
         var column = EditorTextBox.CaretIndex - lineStart + 1;
-        var displayLine = Math.Max(1, lineIndex + 1 + (tab?.IsPartialEdit == true ? (int)tab.PartialEditStartLine : 0));
 
-        CaretText.Text = $"Ln {displayLine:N0}, Col {Math.Max(1, column):N0}";
+        CaretText.Text = $"Ln {Math.Max(1, lineIndex + 1):N0}, Col {Math.Max(1, column):N0}";
 
         if (EditorTextBox.SelectionLength > 0)
         {
@@ -100,7 +75,6 @@ public partial class MainWindow
         var enabled = GetActiveTab()?.WordWrapEnabled == true;
         EditorTextBox.TextWrapping = enabled ? TextWrapping.Wrap : TextWrapping.NoWrap;
         EditorTextBox.HorizontalScrollBarVisibility = enabled ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
-        PreviewViewport.WrapText = false;
     }
 
     private void UpdateWindowButtons()
@@ -110,42 +84,22 @@ public partial class MainWindow
 
     private void UpdateZoomStatus()
     {
-        var fontSize = IsPreviewSurfaceActive() ? PreviewViewport.EditorFontSize : EditorTextBox.FontSize;
-        var percent = fontSize / DefaultEditorFontSize * 100;
+        var percent = EditorTextBox.FontSize / DefaultEditorFontSize * 100;
         ZoomText.Text = $"{percent:N0}%";
     }
 
     private void ZoomBy(int delta)
     {
-        var baseSize = IsPreviewSurfaceActive() ? PreviewViewport.EditorFontSize : EditorTextBox.FontSize;
-        var nextSize = Math.Clamp(baseSize + delta, 6, 72);
+        var nextSize = Math.Clamp(EditorTextBox.FontSize + delta, 6, 72);
         EditorTextBox.FontSize = nextSize;
-        PreviewViewport.EditorFontSize = nextSize;
         UpdateZoomStatus();
     }
 
     private void InsertTextAtCaret(string value)
     {
-        var tab = GetActiveTab();
-        if (tab?.Mode == DocumentMode.LargePreview)
-        {
-            ShowLargeFileEditingMessage();
-            return;
-        }
-
         var index = EditorTextBox.CaretIndex;
         EditorTextBox.Text = EditorTextBox.Text.Insert(index, value);
         EditorTextBox.CaretIndex = index + value.Length;
-    }
-
-    private void ShowLargeFileEditingMessage()
-    {
-        MessageBox.Show(
-            this,
-            "This file is extremely large, so it is shown in read-only preview mode.",
-            "Notepad",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
     }
 
     private void CloseMenus()
@@ -160,36 +114,37 @@ public partial class MainWindow
         _themeMode = themeMode;
         var dark = themeMode == AppThemeMode.Dark;
 
-        SetBrush("WindowBackgroundBrush", dark ? "#FF202020" : "#FFF3F3F3");
-        SetBrush("ChromeBrush", dark ? "#FF2C2C2C" : "#FFE9E9E9");
-        SetBrush("MenuBrush", dark ? "#FF2C2C2C" : "#FFE9E9E9");
-        SetBrush("SurfaceBrush", dark ? "#FF2C2C2C" : "#FFFFFFFF");
-        SetBrush("SurfaceRaisedBrush", dark ? "#FF383838" : "#FFF3F3F3");
-        SetBrush("EditorBackgroundBrush", dark ? "#FF1F1F1F" : "#FFFFFFFF");
-        SetBrush("EditorForegroundBrush", dark ? "#FFFFFFFF" : "#FF000000");
-        SetBrush("EditorMutedBrush", dark ? "#FF9D9D9D" : "#FF6C6C6C");
-        SetBrush("BorderBrush", dark ? "#FF383838" : "#FFCCCCCC");
-        SetBrush("DividerBrush", dark ? "#FF404040" : "#FFCCCCCC");
-        SetBrush("TabActiveBrush", dark ? "#FF1F1F1F" : "#FFFFFFFF");
+        SetBrush("WindowBackgroundBrush", dark ? "#FF1C1C1C" : "#FFF3F3F3");
+        SetBrush("ChromeBrush", dark ? "#FF282828" : "#FFE9E9E9");
+        SetBrush("MenuBrush", dark ? "#FF282828" : "#FFE9E9E9");
+        SetBrush("SurfaceBrush", dark ? "#FF282828" : "#FFFFFFFF");
+        SetBrush("SurfaceRaisedBrush", dark ? "#FF323232" : "#FFF3F3F3");
+        SetBrush("EditorBackgroundBrush", dark ? "#FF1C1C1C" : "#FFFFFFFF");
+        SetBrush("EditorForegroundBrush", dark ? "#FFFCFCFC" : "#FF1A1A1A");
+        SetBrush("EditorMutedBrush", dark ? "#FF8A8A8A" : "#FF6C6C6C");
+        SetBrush("BorderBrush", dark ? "#FF3A3A3A" : "#FFCCCCCC");
+        SetBrush("DividerBrush", dark ? "#FF3A3A3A" : "#FFCCCCCC");
+        SetBrush("TabActiveBrush", dark ? "#FF1C1C1C" : "#FFFFFFFF");
         SetBrush("TabInactiveBrush", dark ? "#00000000" : "#00000000");
-        SetBrush("TabHoverBrush", dark ? "#FF2D2D2D" : "#FFE8E8E8");
-        SetBrush("TabForegroundBrush", dark ? "#FFFFFFFF" : "#FF000000");
+        SetBrush("TabHoverBrush", dark ? "#FF2A2A2A" : "#FFE4E4E4");
+        SetBrush("TabForegroundBrush", dark ? "#FFFCFCFC" : "#FF1A1A1A");
+        SetBrush("TabInactiveForegroundBrush", dark ? "#FFB0B0B0" : "#FF6C6C6C");
         SetBrush("AccentBrush", dark ? "#FF60CDFF" : "#FF0067C0");
-        SetBrush("AccentSoftBrush", dark ? "#2260CDFF" : "#220067C0");
-        SetBrush("StatusBrush", dark ? "#FF2C2C2C" : "#FFE9E9E9");
-        SetBrush("StatusForegroundBrush", dark ? "#FFB4B4B4" : "#FF404040");
-        SetBrush("MenuForegroundBrush", dark ? "#FFFFFFFF" : "#FF000000");
-        SetBrush("MenuSelectionBrush", dark ? "#FF3D3D3D" : "#FFE0E0E0");
+        SetBrush("AccentSoftBrush", dark ? "#1A60CDFF" : "#1A0067C0");
+        SetBrush("StatusBrush", dark ? "#FF282828" : "#FFE9E9E9");
+        SetBrush("StatusForegroundBrush", dark ? "#FFB0B0B0" : "#FF404040");
+        SetBrush("MenuForegroundBrush", dark ? "#FFFCFCFC" : "#FF1A1A1A");
+        SetBrush("MenuSelectionBrush", dark ? "#FF383838" : "#FFE0E0E0");
         SetBrush("PopupBackgroundBrush", dark ? "#FF2C2C2C" : "#FFFFFFFF");
-        SetBrush("PopupBorderBrush", dark ? "#FF454545" : "#FFCCCCCC");
-        SetBrush("InputBackgroundBrush", dark ? "#FF383838" : "#FFFFFFFF");
-        SetBrush("InputBorderBrush", dark ? "#FF5A5A5A" : "#FFAAAAAA");
+        SetBrush("PopupBorderBrush", dark ? "#FF484848" : "#FFCCCCCC");
+        SetBrush("InputBackgroundBrush", dark ? "#FF333333" : "#FFFFFFFF");
+        SetBrush("InputBorderBrush", dark ? "#FF545454" : "#FFAAAAAA");
         SetBrush("InputFocusBrush", dark ? "#FF60CDFF" : "#FF0067C0");
-        SetBrush("ButtonHoverBrush", dark ? "#FF3D3D3D" : "#FFE0E0E0");
-        SetBrush("ButtonPressedBrush", dark ? "#FF484848" : "#FFD0D0D0");
-        SetBrush("ScrollThumbBrush", dark ? "#FF686868" : "#FFAAAAAA");
-        SetBrush("ScrollThumbHoverBrush", dark ? "#FF888888" : "#FF888888");
-        SetBrush("ScrollTrackBrush", dark ? "#18FFFFFF" : "#18000000");
+        SetBrush("ButtonHoverBrush", dark ? "#FF383838" : "#FFE0E0E0");
+        SetBrush("ButtonPressedBrush", dark ? "#FF444444" : "#FFD0D0D0");
+        SetBrush("ScrollThumbBrush", dark ? "#FF606060" : "#FFAAAAAA");
+        SetBrush("ScrollThumbHoverBrush", dark ? "#FF808080" : "#FF888888");
+        SetBrush("ScrollTrackBrush", dark ? "#14FFFFFF" : "#14000000");
         SetBrush("FindHighlightBrush", dark ? "#FF60CDFF" : "#FF0067C0");
         SetBrush("FindHighlightForegroundBrush", dark ? "#FF000000" : "#FFFFFFFF");
     }
@@ -274,36 +229,21 @@ public partial class MainWindow
         }
     }
 
-    private async void UndoMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private void UndoMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (!await EnsureEditableTabAsync(GetActiveTab()))
-        {
-            return;
-        }
-
         EditorTextBox.Undo();
     }
 
-    private async void RedoMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private void RedoMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (!await EnsureEditableTabAsync(GetActiveTab()))
-        {
-            return;
-        }
-
         EditorTextBox.Redo();
     }
 
-    private async void CutMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private void CutMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (!await EnsureEditableTabAsync(GetActiveTab()))
-        {
-            return;
-        }
-
         EditorTextBox.Cut();
     }
 
@@ -313,14 +253,9 @@ public partial class MainWindow
         EditorTextBox.Copy();
     }
 
-    private async void PasteMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private void PasteMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (!await EnsureEditableTabAsync(GetActiveTab()))
-        {
-            return;
-        }
-
         EditorTextBox.Paste();
     }
 
@@ -330,7 +265,7 @@ public partial class MainWindow
         EditorTextBox.SelectAll();
     }
 
-    private async void WordWrapMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private void WordWrapMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         var tab = GetActiveTab();
         if (tab is null)
@@ -339,17 +274,6 @@ public partial class MainWindow
         }
 
         ViewMenuPopup.IsOpen = false;
-
-        if (!await EnsureEditableTabAsync(tab))
-        {
-            return;
-        }
-
-        if (!tab.WordWrapEnabled && EditorTextBox.Text.Length > WordWrapSoftLimitCharacters)
-        {
-            MessageBox.Show(this, "Word wrap may be slow for very large documents.", "Notepad", MessageBoxButton.OK, MessageBoxImage.Warning);
-        }
-
         tab.WordWrapEnabled = !tab.WordWrapEnabled;
         ConfigureWordWrap();
         UpdateStatusBar();
@@ -371,7 +295,6 @@ public partial class MainWindow
     {
         ViewMenuPopup.IsOpen = false;
         EditorTextBox.FontSize = DefaultEditorFontSize;
-        PreviewViewport.EditorFontSize = DefaultEditorFontSize;
         UpdateZoomStatus();
     }
 
@@ -403,14 +326,9 @@ public partial class MainWindow
         UpdateStatusBar();
     }
 
-    private async void InsertTimeDateButton_OnClick(object sender, RoutedEventArgs e)
+    private void InsertTimeDateButton_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (!await EnsureEditableTabAsync(GetActiveTab()))
-        {
-            return;
-        }
-
         InsertTextAtCaret(DateTime.Now.ToString("h:mm tt M/d/yyyy"));
     }
 
@@ -525,6 +443,7 @@ public partial class MainWindow
         _replaceVisible = false;
         ReplaceRowPanel.Visibility = Visibility.Collapsed;
         ResetFindHighlight();
+        RemoveHighlightAdorner();
         EditorTextBox.Focus();
     }
 }

@@ -74,7 +74,6 @@ public partial class MainWindow
                 case Key.NumPad0:
                     e.Handled = true;
                     EditorTextBox.FontSize = DefaultEditorFontSize;
-                    PreviewViewport.EditorFontSize = DefaultEditorFontSize;
                     UpdateZoomStatus();
                     return;
                 case Key.P:
@@ -143,7 +142,6 @@ public partial class MainWindow
         foreach (var tab in _tabs)
         {
             CancelLoad(tab);
-            DisposePreviewDocument(tab);
         }
 
         _statusRefreshTimer.Stop();
@@ -158,14 +156,13 @@ public partial class MainWindow
         }
 
         var tab = GetActiveTab();
-        if (tab is null || tab.Mode == DocumentMode.LargePreview)
+        if (tab is null || tab.IsLoading)
         {
             return;
         }
 
         var wasDirty = tab.IsDirty;
         tab.Text = EditorTextBox.Text;
-        tab.PreviewText = tab.Text;
         tab.IsDirty = true;
         tab.Title = string.IsNullOrWhiteSpace(tab.Path) ? "Untitled" : Path.GetFileName(tab.Path);
         tab.LoadedCharacterCount = tab.Text.Length;
@@ -178,12 +175,17 @@ public partial class MainWindow
         }
 
         RefreshActiveTabUi();
+
+        if (FindPanel.Visibility == Visibility.Visible)
+        {
+            RefreshHighlightAll();
+        }
     }
 
     private void EditorTextBox_OnSelectionChanged(object sender, RoutedEventArgs e)
     {
         var tab = GetActiveTab();
-        if (tab is null)
+        if (tab is null || tab.IsLoading)
         {
             return;
         }
@@ -206,46 +208,6 @@ public partial class MainWindow
     {
         e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
-    }
-
-    private void PreviewViewport_OnTopLineChanged(object? sender, EventArgs e)
-    {
-        var tab = GetActiveTab();
-        if (tab?.Mode != DocumentMode.LargePreview)
-        {
-            return;
-        }
-
-        tab.PreviewTopLine = PreviewViewport.TopLine;
-        UpdatePreviewScrollBar(tab);
-        UpdateStatusBar();
-    }
-
-    private async void PreviewViewport_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        var tab = GetActiveTab();
-        if (tab?.Mode != DocumentMode.LargePreview)
-        {
-            return;
-        }
-
-        e.Handled = true;
-        await EnsureEditableTabAsync(tab);
-    }
-
-    private void PreviewScrollBar_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        var tab = GetActiveTab();
-        if (tab?.Mode != DocumentMode.LargePreview || PreviewViewport.Document is null)
-        {
-            return;
-        }
-
-        var targetLine = (long)Math.Round(e.NewValue);
-        if (targetLine != PreviewViewport.TopLine)
-        {
-            PreviewViewport.ScrollToLine(targetLine);
-        }
     }
 
     private static long CountLineBreaks(string value)

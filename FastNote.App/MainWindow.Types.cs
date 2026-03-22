@@ -49,6 +49,13 @@ public partial class MainWindow
         public FileDocument? PreviewDocument { get; set; }
         public EventHandler<FileLoadProgress>? PreviewProgressHandler { get; set; }
         public long PreviewTopLine { get; set; }
+        public bool IsPreparingEditor { get; set; }
+        public bool IsPartialEdit { get; set; }
+        public long PartialEditStartLine { get; set; }
+        public int PartialEditLineCount { get; set; }
+        public long PartialEditStartOffset { get; set; }
+        public long PartialEditEndOffset { get; set; }
+        public Encoding? PartialEditEncoding { get; set; }
 
         public string DisplayTitle
         {

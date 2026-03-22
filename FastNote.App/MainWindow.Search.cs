@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace FastNote.App;
 
@@ -38,6 +39,11 @@ public partial class MainWindow
             EditorTextBox.Focus();
             EditorTextBox.Select(index, query.Length);
             EditorTextBox.ScrollToLine(EditorTextBox.GetLineIndexFromCharacterIndex(index));
+            ApplyFindHighlight();
+        }
+        else
+        {
+            ResetFindHighlight();
         }
     }
 
@@ -73,6 +79,11 @@ public partial class MainWindow
             EditorTextBox.Focus();
             EditorTextBox.Select(index, query.Length);
             EditorTextBox.ScrollToLine(EditorTextBox.GetLineIndexFromCharacterIndex(index));
+            ApplyFindHighlight();
+        }
+        else
+        {
+            ResetFindHighlight();
         }
     }
 
@@ -144,23 +155,33 @@ public partial class MainWindow
         FindTextBox.SelectAll();
     }
 
-    private void FindButton_OnClick(object sender, RoutedEventArgs e)
+    private async void FindButton_OnClick(object sender, RoutedEventArgs e)
     {
+        if (!await EnsureEditableTabAsync(GetActiveTab()))
+        {
+            return;
+        }
+
         EditMenuPopup.IsOpen = false;
         OpenFindPanel(showReplace: false);
     }
 
-    private void FindAndReplaceButton_OnClick(object sender, RoutedEventArgs e)
+    private async void FindAndReplaceButton_OnClick(object sender, RoutedEventArgs e)
     {
+        if (!await EnsureEditableTabAsync(GetActiveTab()))
+        {
+            return;
+        }
+
         EditMenuPopup.IsOpen = false;
         OpenFindPanel(showReplace: true);
     }
 
-    private void GoToMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private async void GoToMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
 
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
+        if (!await EnsureEditableTabAsync(GetActiveTab()))
         {
             return;
         }
@@ -187,6 +208,10 @@ public partial class MainWindow
         if (!string.IsNullOrEmpty(FindTextBox.Text))
         {
             FindNextInternal();
+        }
+        else
+        {
+            ResetFindHighlight();
         }
     }
 
@@ -229,6 +254,7 @@ public partial class MainWindow
             EditorTextBox.SelectedText = ReplaceTextBox.Text;
         }
 
+        ResetFindHighlight();
         FindNextInternal();
     }
 
@@ -268,5 +294,28 @@ public partial class MainWindow
         var caretPos = EditorTextBox.CaretIndex;
         EditorTextBox.Text = newText;
         EditorTextBox.CaretIndex = Math.Min(caretPos, newText.Length);
+        ResetFindHighlight();
+    }
+
+    private void ApplyFindHighlight()
+    {
+        if (FindPanel.Visibility != Visibility.Visible)
+        {
+            return;
+        }
+
+        EditorTextBox.SelectionBrush = GetResourceBrush("FindHighlightBrush", Colors.DodgerBlue);
+        EditorTextBox.SelectionTextBrush = GetResourceBrush("FindHighlightForegroundBrush", Colors.White);
+    }
+
+    private void ResetFindHighlight()
+    {
+        EditorTextBox.SelectionBrush = GetResourceBrush("AccentSoftBrush", Color.FromArgb(0x22, 0x00, 0x67, 0xC0));
+        EditorTextBox.SelectionTextBrush = GetResourceBrush("EditorForegroundBrush", Colors.White);
+    }
+
+    private Brush GetResourceBrush(string resourceKey, Color fallbackColor)
+    {
+        return Application.Current.Resources[resourceKey] as Brush ?? new SolidColorBrush(fallbackColor);
     }
 }

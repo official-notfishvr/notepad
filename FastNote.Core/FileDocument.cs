@@ -52,6 +52,7 @@ public sealed class FileDocument : IDisposable
     public string Path { get; }
     public long FileSizeBytes { get; }
     public string EncodingName { get; }
+    public Encoding TextEncoding => _encoding;
     public TimeSpan InitialOpenDuration { get; }
     public TimeSpan IndexDuration { get; private set; }
 
@@ -131,6 +132,36 @@ public sealed class FileDocument : IDisposable
 
             var rate = _lineStarts.Count / (double)Math.Max(1, _scanPosition);
             return Math.Max(_lineStarts.Count, (long)Math.Ceiling(rate * FileSizeBytes));
+        }
+    }
+
+    public bool TryGetLineRangeOffsets(long startLine, int lineCount, out long startOffset, out long endOffset)
+    {
+        lock (_stateGate)
+        {
+            startOffset = 0;
+            endOffset = 0;
+
+            if (lineCount <= 0 || startLine < 0 || startLine >= _lineStarts.Count)
+            {
+                return false;
+            }
+
+            startOffset = _lineStarts[(int)startLine];
+            var nextLineIndex = startLine + lineCount;
+            if (nextLineIndex < _lineStarts.Count)
+            {
+                endOffset = _lineStarts[(int)nextLineIndex];
+                return true;
+            }
+
+            if (_isIndexComplete && nextLineIndex == _lineStarts.Count)
+            {
+                endOffset = FileSizeBytes;
+                return true;
+            }
+
+            return false;
         }
     }
 

@@ -12,6 +12,13 @@ public partial class MainWindow
 {
     protected override async void OnPreviewKeyDown(KeyEventArgs e)
     {
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.Tab)
+        {
+            e.Handled = true;
+            SwitchTabByOffset(Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? -1 : 1);
+            return;
+        }
+
         if (Keyboard.Modifiers == ModifierKeys.Control)
         {
             switch (e.Key)
@@ -67,6 +74,7 @@ public partial class MainWindow
                 case Key.NumPad0:
                     e.Handled = true;
                     EditorTextBox.FontSize = DefaultEditorFontSize;
+                    PreviewViewport.EditorFontSize = DefaultEditorFontSize;
                     UpdateZoomStatus();
                     return;
                 case Key.P:
@@ -209,7 +217,35 @@ public partial class MainWindow
         }
 
         tab.PreviewTopLine = PreviewViewport.TopLine;
+        UpdatePreviewScrollBar(tab);
         UpdateStatusBar();
+    }
+
+    private async void PreviewViewport_OnMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var tab = GetActiveTab();
+        if (tab?.Mode != DocumentMode.LargePreview)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        await EnsureEditableTabAsync(tab);
+    }
+
+    private void PreviewScrollBar_OnValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        var tab = GetActiveTab();
+        if (tab?.Mode != DocumentMode.LargePreview || PreviewViewport.Document is null)
+        {
+            return;
+        }
+
+        var targetLine = (long)Math.Round(e.NewValue);
+        if (targetLine != PreviewViewport.TopLine)
+        {
+            PreviewViewport.ScrollToLine(targetLine);
+        }
     }
 
     private static long CountLineBreaks(string value)

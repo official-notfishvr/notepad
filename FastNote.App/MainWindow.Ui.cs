@@ -59,8 +59,9 @@ public partial class MainWindow
         var lineIndex = EditorTextBox.GetLineIndexFromCharacterIndex(EditorTextBox.CaretIndex);
         var lineStart = EditorTextBox.GetCharacterIndexFromLineIndex(lineIndex);
         var column = EditorTextBox.CaretIndex - lineStart + 1;
+        var displayLine = Math.Max(1, lineIndex + 1 + (tab?.IsPartialEdit == true ? (int)tab.PartialEditStartLine : 0));
 
-        CaretText.Text = $"Ln {Math.Max(1, lineIndex + 1):N0}, Col {Math.Max(1, column):N0}";
+        CaretText.Text = $"Ln {displayLine:N0}, Col {Math.Max(1, column):N0}";
 
         if (EditorTextBox.SelectionLength > 0)
         {
@@ -141,7 +142,7 @@ public partial class MainWindow
     {
         MessageBox.Show(
             this,
-            "This file is too large to edit directly. It is shown in read-only mode.",
+            "This file is extremely large, so it is shown in read-only preview mode.",
             "Notepad",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
@@ -273,10 +274,10 @@ public partial class MainWindow
         }
     }
 
-    private void UndoMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private async void UndoMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
+        if (!await EnsureEditableTabAsync(GetActiveTab()))
         {
             return;
         }
@@ -284,10 +285,10 @@ public partial class MainWindow
         EditorTextBox.Undo();
     }
 
-    private void RedoMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private async void RedoMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
+        if (!await EnsureEditableTabAsync(GetActiveTab()))
         {
             return;
         }
@@ -295,12 +296,11 @@ public partial class MainWindow
         EditorTextBox.Redo();
     }
 
-    private void CutMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private async void CutMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
+        if (!await EnsureEditableTabAsync(GetActiveTab()))
         {
-            ShowLargeFileEditingMessage();
             return;
         }
 
@@ -313,12 +313,11 @@ public partial class MainWindow
         EditorTextBox.Copy();
     }
 
-    private void PasteMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private async void PasteMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        if (GetActiveTab()?.Mode == DocumentMode.LargePreview)
+        if (!await EnsureEditableTabAsync(GetActiveTab()))
         {
-            ShowLargeFileEditingMessage();
             return;
         }
 
@@ -331,7 +330,7 @@ public partial class MainWindow
         EditorTextBox.SelectAll();
     }
 
-    private void WordWrapMenuItem_OnClick(object sender, RoutedEventArgs e)
+    private async void WordWrapMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         var tab = GetActiveTab();
         if (tab is null)
@@ -341,9 +340,8 @@ public partial class MainWindow
 
         ViewMenuPopup.IsOpen = false;
 
-        if (tab.Mode == DocumentMode.LargePreview)
+        if (!await EnsureEditableTabAsync(tab))
         {
-            MessageBox.Show(this, "Word wrap is not available in large file mode.", "Notepad", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -405,9 +403,14 @@ public partial class MainWindow
         UpdateStatusBar();
     }
 
-    private void InsertTimeDateButton_OnClick(object sender, RoutedEventArgs e)
+    private async void InsertTimeDateButton_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
+        if (!await EnsureEditableTabAsync(GetActiveTab()))
+        {
+            return;
+        }
+
         InsertTextAtCaret(DateTime.Now.ToString("h:mm tt M/d/yyyy"));
     }
 
@@ -500,18 +503,16 @@ public partial class MainWindow
         popup.IsOpen = shouldOpen;
     }
 
-    private void TabButton_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void TabButton_OnClick(object sender, RoutedEventArgs e)
     {
-        e.Handled = true;
         if (sender is Button { Tag: int index })
         {
             SwitchToTab(index);
         }
     }
 
-    private async void TabCloseButton_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private async void TabCloseButton_OnClick(object sender, RoutedEventArgs e)
     {
-        e.Handled = true;
         if (sender is Button { Tag: Guid tabId })
         {
             await CloseTabAsync(tabId);
@@ -523,6 +524,7 @@ public partial class MainWindow
         FindPanel.Visibility = Visibility.Collapsed;
         _replaceVisible = false;
         ReplaceRowPanel.Visibility = Visibility.Collapsed;
+        ResetFindHighlight();
         EditorTextBox.Focus();
     }
 }

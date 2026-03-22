@@ -7,8 +7,10 @@ namespace FastNote.App;
 public partial class MainWindow : Window
 {
     private const double DefaultEditorFontSize = 14;
-    private const int WordWrapSoftLimitCharacters = 300_000;
-    private const long LargeFileThresholdBytes = 1L * 1024 * 1024;
+    private const int WordWrapSoftLimitCharacters = 2_000_000;
+    private const long LargeFileThresholdBytes = 8L * 1024 * 1024;
+    private const int LoadReadBufferCharacters = 256 * 1024;
+    private const int UiAppendBatchCharacters = 512 * 1024;
     private const int TabRetentionLimit = 12;
 
     private readonly List<DocumentTab> _tabs = [];

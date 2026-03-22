@@ -59,6 +59,9 @@ public partial class MainWindow : Window
         var loadVersion = tab.LoadVersion;
         tab.IsLoading = true;
         tab.LoadingLabel = "Loading...";
+        tab.LoadBuffer = new StringBuilder();
+        tab.LiveTextLength = 0;
+        tab.LastUiRefreshUtc = DateTime.MinValue;
         _isInternalUpdate = true;
         EditorTextBox.Clear();
         tab.Path = path;
@@ -66,6 +69,7 @@ public partial class MainWindow : Window
         tab.IsDirty = false;
         _isInternalUpdate = false;
         UpdateLoadingUi();
+        UpdateEditorReadOnlyState();
         UpdateTitle();
         RenderTabs();
         UpdateStatusBar();
@@ -79,22 +83,30 @@ public partial class MainWindow : Window
         {
             var chunk = new string(buffer, 0, read);
             builder.Append(chunk);
-            tab.Text = builder.ToString();
+            tab.LoadBuffer.Append(chunk);
+            tab.LiveTextLength += chunk.Length;
             tab.LoadingLabel = $"Loading... {stream.Position * 100 / Math.Max(1, stream.Length):N0}%";
 
             if (GetActiveTab()?.Id == tab.Id && loadVersion == tab.LoadVersion)
             {
                 _isInternalUpdate = true;
-                EditorTextBox.Text = tab.Text;
-                EditorTextBox.CaretIndex = Math.Min(EditorTextBox.CaretIndex, EditorTextBox.Text.Length);
+                EditorTextBox.AppendText(chunk);
                 _isInternalUpdate = false;
-                UpdateLoadingUi();
-                UpdateStatusBar();
+
+                var now = DateTime.UtcNow;
+                if ((now - tab.LastUiRefreshUtc).TotalMilliseconds >= 150)
+                {
+                    tab.LastUiRefreshUtc = now;
+                    UpdateLoadingUi();
+                    UpdateStatusBar();
+                }
             }
 
             await Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.Background);
         }
 
+        tab.Text = builder.ToString();
+        tab.LoadBuffer = null;
         tab.IsLoading = false;
         tab.LoadingLabel = string.Empty;
         tab.EncodingLabel = reader.CurrentEncoding.EncodingName.Contains("UTF-8", StringComparison.OrdinalIgnoreCase)
@@ -106,6 +118,7 @@ public partial class MainWindow : Window
             EditorTextBox.CaretIndex = 0;
             EditorTextBox.Select(0, 0);
             UpdateLoadingUi();
+            UpdateEditorReadOnlyState();
         }
 
         RenderTabs();
@@ -195,14 +208,20 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateEditorReadOnlyState()
+    {
+        EditorTextBox.IsReadOnly = GetActiveTab()?.IsLoading == true;
+    }
+
     private void UpdateStatusBar()
     {
         var lineIndex = EditorTextBox.GetLineIndexFromCharacterIndex(EditorTextBox.CaretIndex);
         var lineStart = EditorTextBox.GetCharacterIndexFromLineIndex(lineIndex);
         var column = EditorTextBox.CaretIndex - lineStart + 1;
         CaretText.Text = $"Ln {lineIndex + 1:N0}, Col {column:N0}";
-        CharacterCountText.Text = $"{EditorTextBox.Text.Length:N0} characters";
         var tab = GetActiveTab();
+        var characterCount = tab?.IsLoading == true ? tab.LiveTextLength : EditorTextBox.Text.Length;
+        CharacterCountText.Text = $"{characterCount:N0} characters";
         DocumentModeText.Text = tab?.WordWrapEnabled == true ? "Word wrap" : "Plain text";
         LineEndingText.Text = DetectLineEnding();
         WordWrapCheckGlyph.Opacity = tab?.WordWrapEnabled == true ? 0.8 : 0;
@@ -290,7 +309,11 @@ public partial class MainWindow : Window
             return;
         }
 
-        tab.Text = EditorTextBox.Text;
+        if (!tab.IsLoading)
+        {
+            tab.Text = EditorTextBox.Text;
+            tab.LiveTextLength = tab.Text.Length;
+        }
         tab.CaretIndex = EditorTextBox.CaretIndex;
         tab.SelectionStart = EditorTextBox.SelectionStart;
         tab.SelectionLength = EditorTextBox.SelectionLength;
@@ -309,11 +332,14 @@ public partial class MainWindow : Window
         var tab = _tabs[index];
 
         _isInternalUpdate = true;
-        EditorTextBox.Text = tab.Text;
+        EditorTextBox.Text = tab.IsLoading && tab.LoadBuffer is not null
+            ? tab.LoadBuffer.ToString()
+            : tab.Text;
         EncodingText.Text = tab.EncodingLabel;
         _isInternalUpdate = false;
 
         ConfigureWordWrap();
+        UpdateEditorReadOnlyState();
         EditorTextBox.CaretIndex = Math.Min(tab.CaretIndex, EditorTextBox.Text.Length);
         EditorTextBox.Select(Math.Min(tab.SelectionStart, EditorTextBox.Text.Length), Math.Min(tab.SelectionLength, Math.Max(0, EditorTextBox.Text.Length - EditorTextBox.SelectionStart)));
         UpdateLoadingUi();
@@ -816,6 +842,7 @@ public partial class MainWindow : Window
     private void SetIdleState()
     {
         StreamingBadge.Visibility = Visibility.Collapsed;
+        UpdateEditorReadOnlyState();
         UpdateStatusBar();
     }
 
@@ -947,6 +974,9 @@ public partial class MainWindow : Window
         public bool IsLoading { get; set; }
         public string LoadingLabel { get; set; } = string.Empty;
         public int LoadVersion { get; set; }
+        public StringBuilder? LoadBuffer { get; set; }
+        public int LiveTextLength { get; set; }
+        public DateTime LastUiRefreshUtc { get; set; }
         public string DisplayTitle => (string.IsNullOrWhiteSpace(Path) ? Title : System.IO.Path.GetFileName(Path)) + (IsDirty ? " •" : string.Empty);
     }
 }

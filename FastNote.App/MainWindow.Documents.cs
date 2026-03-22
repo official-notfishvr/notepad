@@ -575,6 +575,7 @@ public partial class MainWindow
             EditorDocument = new TextDocument(),
             IsEditorBacked = true,
             LastActivatedUtc = DateTime.UtcNow,
+            WordWrapEnabled = _appSettings.DefaultWordWrap,
         };
     }
 

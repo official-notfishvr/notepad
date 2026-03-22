@@ -2,6 +2,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
+using FastNote.App.Settings;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
 
@@ -12,6 +13,7 @@ public partial class MainWindow : Window
     private const double DefaultEditorFontSize = 14;
     private const int TabRetentionLimit = 12;
 
+    private readonly AppSettings _appSettings;
     private readonly List<DocumentTab> _tabs = [];
     private readonly Dictionary<Guid, CancellationTokenSource> _loadTokens = [];
     private readonly DispatcherTimer _statusRefreshTimer;
@@ -25,14 +27,15 @@ public partial class MainWindow : Window
     private bool _replaceVisible;
     private int _activeTabIndex = -1;
 
-    private FontFamily _editorFontFamily = new("Consolas");
+    private FontFamily _editorFontFamily = new("Segoe UI Variable Text");
     private FontStyle _editorFontStyle = FontStyles.Normal;
     private FontWeight _editorFontWeight = FontWeights.Normal;
 
     public MainWindow()
     {
+        _appSettings = AppSettingsStore.Load();
         InitializeComponent();
-        ApplyTheme(AppThemeMode.Dark);
+        ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
         UpdateWindowButtons();
         EditorTextBox.TextChanged += EditorTextBox_OnTextChanged;
         EditorTextBox.TextArea.SelectionChanged += EditorTextBox_OnSelectionChanged;
@@ -68,6 +71,27 @@ public partial class MainWindow : Window
         };
 
         CreateNewTabAndActivate();
+        ApplySavedSettings();
         EditorTextBox.Focus();
+        Loaded += MainWindow_OnLoaded;
+    }
+
+    private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_appSettings.SetupCompleted)
+        {
+            return;
+        }
+
+        if (FileAssociationInstaller.IsTxtAssociationInstalledForCurrentApp())
+        {
+            _appSettings.SetupCompleted = true;
+            AppSettingsStore.Save(_appSettings);
+            return;
+        }
+
+        ShowSettingsWindow();
+        _appSettings.SetupCompleted = true;
+        SaveSettings();
     }
 }

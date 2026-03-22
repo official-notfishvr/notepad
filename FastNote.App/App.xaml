@@ -1,7 +1,7 @@
 <Application x:Class="FastNote.App.App" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <FontFamily x:Key="UiFont">Segoe UI Variable Text</FontFamily>
-        <FontFamily x:Key="EditorFont">Consolas</FontFamily>
+        <FontFamily x:Key="EditorFont">Segoe UI Variable Text</FontFamily>
         <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF202020" />
         <SolidColorBrush x:Key="ChromeBrush" Color="#FF2C2C2C" />
         <SolidColorBrush x:Key="MenuBrush" Color="#FF2C2C2C" />

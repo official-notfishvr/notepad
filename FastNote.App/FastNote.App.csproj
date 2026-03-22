@@ -3,6 +3,11 @@
         <Compile Remove="AssemblyInfo.cs" />
     </ItemGroup>
     <ItemGroup>
+        <Resource Include="..\Assets\txtfile.ico">
+            <Link>Assets\txtfile.ico</Link>
+        </Resource>
+    </ItemGroup>
+    <ItemGroup>
         <ProjectReference Include="..\FastNote.Core\FastNote.Core.csproj" />
     </ItemGroup>
     <ItemGroup>
@@ -15,5 +20,6 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <UseWPF>true</UseWPF>
+        <ApplicationIcon>..\Assets\txtfile.ico</ApplicationIcon>
     </PropertyGroup>
 </Project>

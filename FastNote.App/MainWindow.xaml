@@ -24,7 +24,7 @@
         <shell:WindowChrome CaptionHeight="0" CornerRadius="0" GlassFrameThickness="0" ResizeBorderThickness="6" UseAeroCaptionButtons="False" />
     </shell:WindowChrome.WindowChrome>
     <Window.Resources>
-        <FontFamily x:Key="EditorFont">Consolas</FontFamily>
+        <FontFamily x:Key="EditorFont">Segoe UI Variable Text</FontFamily>
         <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF1C1C1C" />
         <SolidColorBrush x:Key="ChromeBrush" Color="#FF282828" />
         <SolidColorBrush x:Key="MenuBrush" Color="#FF282828" />
@@ -336,7 +336,7 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <Button x:Name="MarkdownPreviewToolbarButton" Style="{StaticResource MenuTriggerButtonStyle}" Padding="10,4" Content="Markdown preview" Click="MarkdownPreviewMenuItem_OnClick" ToolTip="Toggle markdown preview" Visibility="Collapsed" />
-                                    <Button Style="{StaticResource MenuTriggerButtonStyle}" FontFamily="Segoe Fluent Icons" FontSize="14" Padding="8,4" Content="" Click="ThemeToggleToolbarButton_OnClick" ToolTip="Toggle theme" />
+                                    <Button Style="{StaticResource MenuTriggerButtonStyle}" FontFamily="Segoe Fluent Icons" FontSize="14" Padding="8,4" Content="" Click="ThemeToggleToolbarButton_OnClick" ToolTip="Open settings" />
                                 </StackPanel>
                             </Grid>
                         </Border>

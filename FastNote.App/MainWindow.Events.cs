@@ -81,6 +81,10 @@ public partial class MainWindow
                     e.Handled = true;
                     PrintMenuItem_OnClick(this, new RoutedEventArgs());
                     return;
+                case Key.OemComma:
+                    e.Handled = true;
+                    SettingsMenuItem_OnClick(this, new RoutedEventArgs());
+                    return;
                 case Key.A:
                     break;
             }

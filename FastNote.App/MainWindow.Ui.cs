@@ -1,3 +1,4 @@
+using FastNote.App.Settings;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -11,6 +12,70 @@ namespace FastNote.App;
 
 public partial class MainWindow
 {
+    private static AppThemeMode GetThemeModeFromSettings(string? theme)
+    {
+        return string.Equals(theme, "Light", StringComparison.OrdinalIgnoreCase) ? AppThemeMode.Light : AppThemeMode.Dark;
+    }
+
+    private void ApplySavedSettings()
+    {
+        _statusBarVisible = _appSettings.StatusBarVisible;
+        StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
+
+        _editorFontFamily = new FontFamily(string.IsNullOrWhiteSpace(_appSettings.EditorFontFamily) ? "Segoe UI Variable Text" : _appSettings.EditorFontFamily);
+        _editorFontStyle = string.Equals(_appSettings.EditorFontStyle, "Italic", StringComparison.OrdinalIgnoreCase) ? FontStyles.Italic : FontStyles.Normal;
+        _editorFontWeight = string.Equals(_appSettings.EditorFontWeight, "Bold", StringComparison.OrdinalIgnoreCase) ? FontWeights.Bold : FontWeights.Normal;
+
+        EditorTextBox.FontFamily = _editorFontFamily;
+        EditorTextBox.FontStyle = _editorFontStyle;
+        EditorTextBox.FontWeight = _editorFontWeight;
+        EditorTextBox.FontSize = Math.Clamp(_appSettings.EditorFontSize, 6, 72);
+
+        var tab = GetActiveTab();
+        if (tab is not null)
+        {
+            tab.WordWrapEnabled = _appSettings.DefaultWordWrap;
+            ConfigureWordWrap();
+        }
+
+        UpdateStatusBar();
+    }
+
+    private void SaveSettings()
+    {
+        _appSettings.Theme = _themeMode == AppThemeMode.Light ? "Light" : "Dark";
+        _appSettings.StatusBarVisible = _statusBarVisible;
+        _appSettings.EditorFontFamily = _editorFontFamily.Source;
+        _appSettings.EditorFontStyle = _editorFontStyle == FontStyles.Italic ? "Italic" : "Normal";
+        _appSettings.EditorFontWeight = _editorFontWeight == FontWeights.Bold ? "Bold" : "Normal";
+        _appSettings.EditorFontSize = EditorTextBox.FontSize;
+
+        AppSettingsStore.Save(_appSettings);
+    }
+
+    private void ShowSettingsWindow()
+    {
+        CloseMenus();
+        var dialog = new SettingsWindow(_appSettings, FileAssociationInstaller.IsTxtAssociationInstalledForCurrentApp()) { Owner = this };
+        var result = dialog.ShowDialog();
+
+        if (result != true)
+        {
+            return;
+        }
+
+        _appSettings.Theme = dialog.SelectedTheme;
+        _appSettings.StatusBarVisible = dialog.ShowStatusBar;
+        _appSettings.DefaultWordWrap = dialog.DefaultWordWrap;
+
+        _statusBarVisible = _appSettings.StatusBarVisible;
+        StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
+
+        ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
+        UpdateStatusBar();
+        SaveSettings();
+    }
+
     private void UpdateTitle()
     {
         var tab = GetActiveTab();
@@ -107,6 +172,7 @@ public partial class MainWindow
         var nextSize = Math.Clamp(EditorTextBox.FontSize + delta, 6, 72);
         EditorTextBox.FontSize = nextSize;
         UpdateZoomStatus();
+        SaveSettings();
     }
 
     private void InsertTextAtCaret(string value)
@@ -324,6 +390,7 @@ public partial class MainWindow
         ViewMenuPopup.IsOpen = false;
         EditorTextBox.FontSize = DefaultEditorFontSize;
         UpdateZoomStatus();
+        SaveSettings();
     }
 
     private void StatusBarMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -332,6 +399,7 @@ public partial class MainWindow
         StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
         UpdateStatusBar();
         ViewMenuPopup.IsOpen = false;
+        SaveSettings();
     }
 
     private void LightThemeMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -339,6 +407,7 @@ public partial class MainWindow
         ViewMenuPopup.IsOpen = false;
         ApplyTheme(AppThemeMode.Light);
         UpdateStatusBar();
+        SaveSettings();
     }
 
     private void DarkThemeMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -346,12 +415,12 @@ public partial class MainWindow
         ViewMenuPopup.IsOpen = false;
         ApplyTheme(AppThemeMode.Dark);
         UpdateStatusBar();
+        SaveSettings();
     }
 
     private void ThemeToggleToolbarButton_OnClick(object sender, RoutedEventArgs e)
     {
-        ApplyTheme(_themeMode == AppThemeMode.Dark ? AppThemeMode.Light : AppThemeMode.Dark);
-        UpdateStatusBar();
+        ShowSettingsWindow();
     }
 
     private void MarkdownPreviewMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -400,8 +469,11 @@ public partial class MainWindow
             _editorFontStyle = dialog.SelectedFontStyle;
             _editorFontWeight = dialog.SelectedFontWeight;
             UpdateZoomStatus();
+            SaveSettings();
         }
     }
+
+    private void SettingsMenuItem_OnClick(object sender, RoutedEventArgs e) => ShowSettingsWindow();
 
     private void NewTabButton_OnClick(object sender, RoutedEventArgs e) => CreateNewTabAndActivate();
 

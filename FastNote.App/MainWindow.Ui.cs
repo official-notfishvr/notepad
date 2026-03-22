@@ -78,10 +78,6 @@ public partial class MainWindow
     {
         var tab = GetActiveTab();
         var enabled = tab?.WordWrapEnabled == true;
-        if (enabled && (tab?.IsLoading == true || (tab?.LoadedCharacterCount ?? 0) > WordWrapSoftLimitCharacters))
-        {
-            enabled = false;
-        }
 
         EditorTextBox.WordWrap = enabled;
         EditorTextBox.HorizontalScrollBarVisibility = enabled ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
@@ -223,18 +219,6 @@ public partial class MainWindow
     private void PrintMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         FileMenuPopup.IsOpen = false;
-        var documentLength = EditorTextBox.Document?.TextLength ?? 0;
-        if (documentLength > PrintSoftLimitCharacters)
-        {
-            MessageBox.Show(
-                this,
-                "Printing is disabled for very large files because the WPF print document can freeze or crash the app.",
-                "Notepad",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-            return;
-        }
-
         var printDialog = new PrintDialog();
         if (printDialog.ShowDialog() == true)
         {

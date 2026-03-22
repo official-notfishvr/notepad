@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using ICSharpCode.AvalonEdit.Document;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -246,6 +247,48 @@ public partial class MainWindow
             return "Unix (LF)";
         }
 
+        return "Windows (CRLF)";
+    }
+
+    private static string DetectLineEnding(ITextSource textSource)
+    {
+        using var reader = textSource.CreateReader();
+        var buffer = new char[8_192];
+        var previousWasCr = false;
+        var sawCr = false;
+        var sawLf = false;
+
+        while (true)
+        {
+            var read = reader.Read(buffer, 0, buffer.Length);
+            if (read <= 0)
+            {
+                break;
+            }
+
+            for (var i = 0; i < read; i++)
+            {
+                var ch = buffer[i];
+                if (ch == '\n')
+                {
+                    if (previousWasCr)
+                    {
+                        return "Windows (CRLF)";
+                    }
+
+                    sawLf = true;
+                }
+                else if (ch == '\r')
+                {
+                    sawCr = true;
+                }
+
+                previousWasCr = ch == '\r';
+            }
+        }
+
+        if (sawCr) return "Macintosh (CR)";
+        if (sawLf) return "Unix (LF)";
         return "Windows (CRLF)";
     }
 

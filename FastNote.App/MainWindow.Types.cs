@@ -1,4 +1,5 @@
 using FastNote.Core;
+using ICSharpCode.AvalonEdit.Document;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -19,6 +20,7 @@ public partial class MainWindow
         public string Title { get; set; } = "Untitled";
         public string? Path { get; set; }
         public string Text { get; set; } = string.Empty;
+        public TextDocument? EditorDocument { get; set; }
         public bool IsDirty { get; set; }
         public bool WordWrapEnabled { get; set; }
         public int CaretIndex { get; set; }

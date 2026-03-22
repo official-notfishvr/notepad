@@ -1,5 +1,6 @@
 using ICSharpCode.AvalonEdit.Rendering;
 using ICSharpCode.AvalonEdit.Document;
+using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -9,17 +10,14 @@ namespace FastNote.App;
 public partial class MainWindow : Window
 {
     private const double DefaultEditorFontSize = 14;
-    private const int WordWrapSoftLimitCharacters = 2_000_000;
-    private const int LiveSearchSoftLimitCharacters = 1_000_000;
-    private const int MatchCountSoftLimitCharacters = 2_000_000;
-    private const int ReplaceAllSoftLimitCharacters = 4_000_000;
-    private const int PrintSoftLimitCharacters = 2_000_000;
     private const int TabRetentionLimit = 12;
 
     private readonly List<DocumentTab> _tabs = [];
     private readonly Dictionary<Guid, CancellationTokenSource> _loadTokens = [];
     private readonly DispatcherTimer _statusRefreshTimer;
+    private readonly DispatcherTimer _findRefreshTimer;
     private readonly SearchHighlightColorizer _searchHighlightColorizer;
+    private CancellationTokenSource? _matchCountTokenSource;
 
     private AppThemeMode _themeMode = AppThemeMode.Dark;
     private bool _isInternalUpdate;
@@ -66,6 +64,16 @@ public partial class MainWindow : Window
             RefreshActiveTabUi();
         };
         _statusRefreshTimer.Start();
+        _findRefreshTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(180)
+        };
+        _findRefreshTimer.Tick += (_, _) =>
+        {
+            _findRefreshTimer.Stop();
+            ApplyHighlightAllState();
+            BeginMatchCountUpdate();
+        };
 
         CreateNewTabAndActivate();
         EditorTextBox.Focus();

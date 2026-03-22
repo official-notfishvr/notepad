@@ -5,45 +5,43 @@
         <FontFamily x:Key="UiFont">Segoe UI Variable Text</FontFamily>
         <FontFamily x:Key="EditorFont">Consolas</FontFamily>
 
-        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF171520" />
-        <SolidColorBrush x:Key="ChromeBrush" Color="#FF160432" />
-        <SolidColorBrush x:Key="MenuBrush" Color="#FF241E3B" />
-        <SolidColorBrush x:Key="SurfaceBrush" Color="#FF2B2B2B" />
-        <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#FF343434" />
-        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FF292929" />
-        <SolidColorBrush x:Key="EditorForegroundBrush" Color="#FFF1F1F1" />
-        <SolidColorBrush x:Key="EditorMutedBrush" Color="#FFA7A0B8" />
-        <SolidColorBrush x:Key="BorderBrush" Color="#FF3E3657" />
-        <SolidColorBrush x:Key="DividerBrush" Color="#FF4A425F" />
-        <SolidColorBrush x:Key="TabActiveBrush" Color="#FF272046" />
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF202020" />
+        <SolidColorBrush x:Key="ChromeBrush" Color="#FF2C2C2C" />
+        <SolidColorBrush x:Key="MenuBrush" Color="#FF2C2C2C" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#FF2C2C2C" />
+        <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#FF383838" />
+        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FF1F1F1F" />
+        <SolidColorBrush x:Key="EditorForegroundBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="EditorMutedBrush" Color="#FF9D9D9D" />
+        <SolidColorBrush x:Key="BorderBrush" Color="#FF383838" />
+        <SolidColorBrush x:Key="DividerBrush" Color="#FF404040" />
+        <SolidColorBrush x:Key="TabActiveBrush" Color="#FF1F1F1F" />
         <SolidColorBrush x:Key="TabInactiveBrush" Color="#00000000" />
-        <SolidColorBrush x:Key="TabForegroundBrush" Color="#FFF1F1F1" />
-        <SolidColorBrush x:Key="AccentBrush" Color="#FF7D68FF" />
-        <SolidColorBrush x:Key="AccentSoftBrush" Color="#FF342B56" />
-        <SolidColorBrush x:Key="StatusBrush" Color="#FF241E3B" />
-        <SolidColorBrush x:Key="StatusForegroundBrush" Color="#FFE2DDF5" />
-        <SolidColorBrush x:Key="MenuForegroundBrush" Color="#FFF1F1F1" />
-        <SolidColorBrush x:Key="MenuSelectionBrush" Color="#FF3F365A" />
-        <SolidColorBrush x:Key="PopupBackgroundBrush" Color="#FF2F2F2F" />
-        <SolidColorBrush x:Key="PopupBorderBrush" Color="#FF3C3C3C" />
-        <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FF343434" />
+        <SolidColorBrush x:Key="TabHoverBrush" Color="#FF2D2D2D" />
+        <SolidColorBrush x:Key="TabForegroundBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="AccentBrush" Color="#FF60CDFF" />
+        <SolidColorBrush x:Key="AccentSoftBrush" Color="#2260CDFF" />
+        <SolidColorBrush x:Key="StatusBrush" Color="#FF2C2C2C" />
+        <SolidColorBrush x:Key="StatusForegroundBrush" Color="#FFB4B4B4" />
+        <SolidColorBrush x:Key="MenuForegroundBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="MenuSelectionBrush" Color="#FF3D3D3D" />
+        <SolidColorBrush x:Key="PopupBackgroundBrush" Color="#FF2C2C2C" />
+        <SolidColorBrush x:Key="PopupBorderBrush" Color="#FF454545" />
+        <SolidColorBrush x:Key="InputBackgroundBrush" Color="#FF383838" />
         <SolidColorBrush x:Key="InputBorderBrush" Color="#FF5A5A5A" />
-        <SolidColorBrush x:Key="InputFocusBrush" Color="#FF8A78FF" />
-        <SolidColorBrush x:Key="ButtonHoverBrush" Color="#FF4B4364" />
-        <SolidColorBrush x:Key="ButtonPressedBrush" Color="#FF5A5176" />
-        <SolidColorBrush x:Key="ScrollThumbBrush" Color="#FF6B657A" />
-        <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#FF867F97" />
-        <SolidColorBrush x:Key="ScrollTrackBrush" Color="#18211D2A" />
+        <SolidColorBrush x:Key="InputFocusBrush" Color="#FF60CDFF" />
+        <SolidColorBrush x:Key="ButtonHoverBrush" Color="#FF3D3D3D" />
+        <SolidColorBrush x:Key="ButtonPressedBrush" Color="#FF484848" />
+        <SolidColorBrush x:Key="ScrollThumbBrush" Color="#FF686868" />
+        <SolidColorBrush x:Key="ScrollThumbHoverBrush" Color="#FF888888" />
+        <SolidColorBrush x:Key="ScrollTrackBrush" Color="#18FFFFFF" />
+        <SolidColorBrush x:Key="FindHighlightBrush" Color="#FF60CDFF" />
+        <SolidColorBrush x:Key="FindHighlightForegroundBrush" Color="#FF000000" />
 
         <Style TargetType="Window">
             <Setter Property="Background" Value="{DynamicResource WindowBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}" />
             <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
-        </Style>
-
-        <Style TargetType="StatusBar">
-            <Setter Property="Background" Value="{DynamicResource StatusBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource StatusForegroundBrush}" />
         </Style>
 
         <Style TargetType="TextBox">
@@ -52,12 +50,6 @@
             <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
             <Setter Property="CaretBrush" Value="{DynamicResource EditorForegroundBrush}" />
             <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
-        </Style>
-
-        <Style TargetType="PasswordBox">
-            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
         </Style>
 
         <Style TargetType="ScrollBar">

@@ -16,7 +16,7 @@ if (!File.Exists(path))
 }
 
 var openStopwatch = Stopwatch.StartNew();
-using var document = await LargeFileDocument.OpenAsync(path);
+using var document = await FileDocument.OpenAsync(path);
 openStopwatch.Stop();
 
 Console.WriteLine($"Path: {path}");

@@ -6,10 +6,10 @@
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         mc:Ignorable="d"
         Title="Untitled - Notepad"
-        Width="1380"
-        Height="780"
-        MinWidth="980"
-        MinHeight="620"
+        Width="1100"
+        Height="700"
+        MinWidth="480"
+        MinHeight="320"
         WindowStyle="None"
         ResizeMode="CanResize"
         WindowStartupLocation="CenterScreen"
@@ -17,6 +17,7 @@
         Drop="Window_OnDrop"
         DragOver="Window_OnDragOver"
         StateChanged="Window_OnStateChanged">
+
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="0"
                             CornerRadius="0"
@@ -26,81 +27,23 @@
     </shell:WindowChrome.WindowChrome>
 
     <Window.Resources>
-        <DropShadowEffect x:Key="PopupShadow" BlurRadius="18" ShadowDepth="4" Color="#CC000000" Opacity="0.35" />
-
-        <Style x:Key="ToolbarIconButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="8,4" />
-            <Setter Property="Margin" Value="3,0" />
-            <Setter Property="FontSize" Value="16" />
-            <Setter Property="Cursor" Value="Hand" />
-        </Style>
-
-        <Style x:Key="MenuTriggerButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="14,5" />
-            <Setter Property="Margin" Value="0,0,4,0" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource MenuSelectionBrush}" />
-                </Trigger>
-            </Style.Triggers>
-        </Style>
+        <DropShadowEffect x:Key="PopupShadow" BlurRadius="20" ShadowDepth="3" Color="#88000000" Opacity="0.55" />
 
         <Style x:Key="ChromeButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Width" Value="46" />
-            <Setter Property="Height" Value="30" />
+            <Setter Property="Height" Value="32" />
             <Setter Property="Cursor" Value="Hand" />
-        </Style>
-
-        <Style x:Key="TabStripButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource TabForegroundBrush}" />
-            <Setter Property="BorderBrush" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
             <Setter Property="Focusable" Value="False" />
-            <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}">
-                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                              RecognizesAccessKey="True" />
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="TabCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource TabStripButtonStyle}">
-            <Setter Property="Width" Value="22" />
-            <Setter Property="Height" Value="22" />
-            <Setter Property="Margin" Value="8,0,0,0" />
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Root"
-                                Background="Transparent"
-                                CornerRadius="5">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"
-                                              RecognizesAccessKey="True" />
+                        <Border x:Name="Root" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -115,40 +58,232 @@
             </Setter>
         </Style>
 
-        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{DynamicResource StatusForegroundBrush}" />
-            <Setter Property="VerticalAlignment" Value="Center" />
+        <Style x:Key="CloseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Width" Value="46" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#FFC42B1C" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#FFB22117" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="MenuTriggerButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+            <Setter Property="Padding" Value="12,4" />
+            <Setter Property="Margin" Value="0,0,2,0" />
+            <Setter Property="Height" Value="28" />
             <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource MenuSelectionBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ButtonPressedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TabButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TabForegroundBrush}" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              RecognizesAccessKey="True" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="TabCloseButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Margin" Value="6,0,0,0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="Transparent" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ButtonHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ButtonPressedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
         <Style x:Key="PopupBorderStyle" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource PopupBackgroundBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource PopupBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="0,4" />
             <Setter Property="Effect" Value="{StaticResource PopupShadow}" />
         </Style>
 
         <Style x:Key="PopupRowButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
             <Setter Property="BorderBrush" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Padding" Value="12,7" />
+            <Setter Property="FontSize" Value="12" />
             <Setter Property="Cursor" Value="Hand" />
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{DynamicResource MenuSelectionBrush}" />
-                </Trigger>
-            </Style.Triggers>
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root" Background="{TemplateBinding Background}" CornerRadius="4" Margin="4,1" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource MenuSelectionBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ButtonPressedBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.38" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <Style TargetType="TextBox" x:Key="EditorTextBoxStyle">
+        <Style x:Key="StatusTextStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource StatusForegroundBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+
+        <Style x:Key="FindTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="8,0" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="CaretBrush" Value="{DynamicResource EditorForegroundBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsFocused" Value="True">
+                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource InputFocusBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FindActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource InputBackgroundBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource InputBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource MenuForegroundBrush}" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource MenuSelectionBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource ButtonPressedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="EditorTextBoxStyle" TargetType="TextBox">
             <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="14,12" />
+            <Setter Property="Padding" Value="14,10" />
             <Setter Property="AcceptsReturn" Value="True" />
             <Setter Property="AcceptsTab" Value="True" />
             <Setter Property="SpellCheck.IsEnabled" Value="False" />
@@ -156,415 +291,519 @@
             <Setter Property="FontSize" Value="14" />
             <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
             <Setter Property="HorizontalScrollBarVisibility" Value="Auto" />
+            <Setter Property="CaretBrush" Value="{DynamicResource EditorForegroundBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource AccentSoftBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}" BorderThickness="0">
+                            <ScrollViewer x:Name="PART_ContentHost" Padding="{TemplateBinding Padding}" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
-    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" Background="{DynamicResource WindowBackgroundBrush}">
-        <DockPanel LastChildFill="True">
-            <Border DockPanel.Dock="Top" Background="{DynamicResource ChromeBrush}">
-                <StackPanel>
-                    <Grid x:Name="TitleBar" Height="40" Margin="10,8,0,0" MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+    <Grid>
+        <Border BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1"
+                Background="{DynamicResource WindowBackgroundBrush}">
+            <DockPanel LastChildFill="True">
 
-                        <TextBlock Grid.Column="0"
-                                   Margin="6,0,10,0"
-                                   VerticalAlignment="Center"
-                                   FontFamily="Segoe Fluent Icons"
-                                   FontSize="16"
-                                   Foreground="{DynamicResource MenuForegroundBrush}"
-                                   Text="&#xE8A5;" />
+                <Border DockPanel.Dock="Top" Background="{DynamicResource ChromeBrush}">
+                    <StackPanel>
 
-                        <ScrollViewer Grid.Column="1"
-                                      HorizontalScrollBarVisibility="Hidden"
-                                      VerticalScrollBarVisibility="Disabled"
-                                      CanContentScroll="False">
-                            <StackPanel x:Name="TabStripPanel" Orientation="Horizontal" />
-                        </ScrollViewer>
-
-                        <Button x:Name="NewTabButton"
-                                Grid.Column="2"
-                                Width="28"
-                                Height="28"
-                                Margin="12,6,0,0"
-                                HorizontalAlignment="Left"
-                                Background="Transparent"
-                                BorderBrush="Transparent"
-                                Click="NewTabButton_OnClick"
-                                Cursor="Hand">
-                            <TextBlock VerticalAlignment="Center"
-                                       FontFamily="Segoe Fluent Icons"
-                                       FontSize="12"
-                                       Foreground="{DynamicResource MenuForegroundBrush}"
-                                       Text="&#xE710;" />
-                        </Button>
-
-                        <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right">
-                            <Button Style="{StaticResource ChromeButtonStyle}" Click="MinimizeButton_OnClick">
-                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE921;" />
-                            </Button>
-                            <Button x:Name="MaxRestoreButton" Style="{StaticResource ChromeButtonStyle}" Click="MaxRestoreButton_OnClick">
-                                <TextBlock x:Name="MaxRestoreIcon" HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE922;" />
-                            </Button>
-                            <Button Style="{StaticResource ChromeButtonStyle}" Click="CloseWindowButton_OnClick">
-                                <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE8BB;" />
-                            </Button>
-                        </StackPanel>
-                    </Grid>
-
-                    <Border Height="34" Background="{DynamicResource MenuBrush}">
-                        <Grid Margin="10,0,10,0">
+                        <Grid x:Name="TitleBar" Height="38" MouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
                             <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button x:Name="FileMenuButton" Style="{StaticResource MenuTriggerButtonStyle}" Click="FileMenuButton_OnClick" Content="File" />
-                                <Button x:Name="EditMenuButton" Style="{StaticResource MenuTriggerButtonStyle}" Click="EditMenuButton_OnClick" Content="Edit" />
-                                <Button x:Name="ViewMenuButton" Style="{StaticResource MenuTriggerButtonStyle}" Click="ViewMenuButton_OnClick" Content="View" />
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <Button x:Name="HeadingMenuButton" Style="{StaticResource ToolbarIconButtonStyle}" Click="HeadingMenuButton_OnClick" Content="H1" FontSize="15" FontWeight="SemiBold" />
-                                <Button x:Name="ListMenuButton" Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE8CB;" Click="ListMenuButton_OnClick" />
-                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xF246;" Click="ChecklistButton_OnClick" />
-                                <Button Style="{StaticResource ToolbarIconButtonStyle}" Content="B" FontWeight="Bold" Click="BoldButton_OnClick" />
-                                <Button Style="{StaticResource ToolbarIconButtonStyle}" Content="I" FontStyle="Italic" Click="ItalicButton_OnClick" />
-                                <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="StrikeButton_OnClick">
-                                    <TextBlock Text="S" TextDecorations="Strikethrough" />
-                                </Button>
-                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE71B;" Click="LinkButton_OnClick" />
-                                <Button x:Name="TableMenuButton" Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xECA5;" Click="TableMenuButton_OnClick" />
-                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE8D1;" Click="ClearFormattingButton_OnClick" />
-                            </StackPanel>
-
-                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE721;" Click="FindButton_OnClick" />
-                                <Button Style="{StaticResource ToolbarIconButtonStyle}" FontFamily="Segoe Fluent Icons" Content="&#xE713;" Click="ThemeToggleToolbarButton_OnClick" />
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                </StackPanel>
-            </Border>
-
-            <Border x:Name="StatusChrome" DockPanel.Dock="Bottom" Background="{DynamicResource StatusBrush}">
-                <Grid Height="30" Margin="10,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" Orientation="Horizontal">
-                        <TextBlock x:Name="CaretText" Style="{StaticResource StatusTextStyle}" Text="Ln 1, Col 1" />
-                        <Border Width="1" Height="16" Margin="16,7,16,0" Background="#2E4468" Opacity="0.45" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <TextBlock x:Name="CharacterCountText" Style="{StaticResource StatusTextStyle}" Text="0 characters" />
-                        <Border Width="1" Height="16" Margin="16,7,16,0" Background="#2E4468" Opacity="0.45" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="2" Orientation="Horizontal">
-                        <TextBlock x:Name="DocumentModeText" Style="{StaticResource StatusTextStyle}" Text="Plain text" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="4" Orientation="Horizontal">
-                        <Border Width="1" Height="16" Margin="0,7,16,0" Background="#2E4468" Opacity="0.45" />
-                        <TextBlock x:Name="ZoomText" Style="{StaticResource StatusTextStyle}" Text="100%" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="5" Orientation="Horizontal">
-                        <Border Width="1" Height="16" Margin="16,7,16,0" Background="#2E4468" Opacity="0.45" />
-                        <TextBlock x:Name="LineEndingText" Style="{StaticResource StatusTextStyle}" Text="Windows (CRLF)" />
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="6" Orientation="Horizontal">
-                        <Border Width="1" Height="16" Margin="16,7,16,0" Background="#2E4468" Opacity="0.45" />
-                        <TextBlock x:Name="EncodingText" Style="{StaticResource StatusTextStyle}" Text="UTF-8" />
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <Grid Background="{DynamicResource EditorBackgroundBrush}">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="*" />
-                </Grid.RowDefinitions>
-
-                <Border x:Name="FindPanel"
-                        Grid.Row="0"
-                        Margin="76,12,76,0"
-                        Padding="12"
-                        Background="{DynamicResource PopupBackgroundBrush}"
-                        BorderBrush="{DynamicResource PopupBorderBrush}"
-                        BorderThickness="1"
-                        CornerRadius="10"
-                        Visibility="Collapsed">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                        </Grid.RowDefinitions>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="28" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-
-                        <Button Grid.Row="0"
-                                Grid.Column="0"
-                                Width="24"
-                                Height="24"
-                                Margin="0,0,10,0"
-                                Style="{StaticResource ToolbarIconButtonStyle}"
-                                Click="CloseFindPanelButton_OnClick">
-                            <TextBlock HorizontalAlignment="Center"
+                            <TextBlock Grid.Column="0"
+                                       Margin="12,0,8,0"
                                        VerticalAlignment="Center"
                                        FontFamily="Segoe Fluent Icons"
-                                       FontSize="10"
-                                       Text="&#xE70D;" />
-                        </Button>
+                                       FontSize="15"
+                                       Foreground="{DynamicResource MenuForegroundBrush}"
+                                       Text="&#xE8A5;" />
 
-                        <Grid Grid.Row="0" Grid.Column="1">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="28" />
-                            </Grid.ColumnDefinitions>
-                            <TextBox x:Name="FindTextBox"
-                                     Height="38"
-                                     Margin="0,0,10,0"
-                                     Padding="14,0"
-                                     VerticalContentAlignment="Center"
-                                     BorderThickness="1"
-                                     TextChanged="FindTextBox_OnTextChanged" />
-                            <Button Grid.Column="1"
-                                    Width="24"
-                                    Height="24"
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Style="{StaticResource ToolbarIconButtonStyle}"
-                                    Click="FindNextButton_OnClick">
-                                <TextBlock HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           FontFamily="Segoe Fluent Icons"
-                                           FontSize="12"
-                                           Text="&#xE721;" />
+                            <ScrollViewer Grid.Column="1"
+                                          HorizontalScrollBarVisibility="Hidden"
+                                          VerticalScrollBarVisibility="Disabled"
+                                          CanContentScroll="False"
+                                          VerticalAlignment="Bottom">
+                                <StackPanel x:Name="TabStripPanel" Orientation="Horizontal" />
+                            </ScrollViewer>
+
+                            <Button x:Name="NewTabButton"
+                                    Grid.Column="2"
+                                    Style="{StaticResource ChromeButtonStyle}"
+                                    Width="28"
+                                    Height="28"
+                                    Margin="6,0,0,0"
+                                    Click="NewTabButton_OnClick"
+                                    ToolTip="New tab (Ctrl+N)">
+                                <TextBlock FontFamily="Segoe Fluent Icons"
+                                           FontSize="11"
+                                           Foreground="{DynamicResource MenuForegroundBrush}"
+                                           Text="&#xE710;" />
                             </Button>
+
+                            <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource ChromeButtonStyle}" Click="MinimizeButton_OnClick" ToolTip="Minimize">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE921;" />
+                                </Button>
+                                <Button x:Name="MaxRestoreButton" Style="{StaticResource ChromeButtonStyle}" Click="MaxRestoreButton_OnClick" ToolTip="Maximize/Restore">
+                                    <TextBlock x:Name="MaxRestoreIcon" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE922;" />
+                                </Button>
+                                <Button Style="{StaticResource CloseButtonStyle}" Click="CloseWindowButton_OnClick" ToolTip="Close">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="&#xE8BB;" />
+                                </Button>
+                            </StackPanel>
                         </Grid>
 
-                        <StackPanel Grid.Row="0"
-                                    Grid.Column="2"
-                                    Orientation="Horizontal">
-                            <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="ToggleReplaceButton_OnClick">
-                                <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE70D;" />
-                            </Button>
-                            <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="FindNextButton_OnClick">
-                                <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE74A;" />
-                            </Button>
-                            <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="FindPreviousButton_OnClick">
-                                <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE74B;" />
-                            </Button>
-                            <Button Style="{StaticResource ToolbarIconButtonStyle}" IsEnabled="False">
-                                <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE76D;" />
-                            </Button>
-                            <Button Style="{StaticResource ToolbarIconButtonStyle}" Click="CloseFindPanelButton_OnClick">
-                                <TextBlock FontFamily="Segoe Fluent Icons" Text="&#xE711;" />
-                            </Button>
-                        </StackPanel>
+                        <Border Height="36" Background="{DynamicResource MenuBrush}">
+                            <Grid Margin="8,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button x:Name="FileMenuButton" Style="{StaticResource MenuTriggerButtonStyle}" Content="File" Click="FileMenuButton_OnClick" />
+                                    <Button x:Name="EditMenuButton" Style="{StaticResource MenuTriggerButtonStyle}" Content="Edit" Click="EditMenuButton_OnClick" />
+                                    <Button x:Name="ViewMenuButton" Style="{StaticResource MenuTriggerButtonStyle}" Content="View" Click="ViewMenuButton_OnClick" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <Button Style="{StaticResource MenuTriggerButtonStyle}"
+                                            FontFamily="Segoe Fluent Icons"
+                                            FontSize="14"
+                                            Padding="8,4"
+                                            Content="&#xE713;"
+                                            Click="ThemeToggleToolbarButton_OnClick"
+                                            ToolTip="Toggle theme" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
 
-                        <TextBox x:Name="ReplaceTextBox"
-                                 Grid.Row="1"
-                                 Grid.Column="1"
-                                 Height="32"
-                                 Margin="0,10,10,0"
-                                 Padding="14,0"
-                                 VerticalContentAlignment="Center"
-                                 BorderThickness="1"
-                                 Visibility="Collapsed" />
+                    </StackPanel>
+                </Border>
 
-                        <StackPanel x:Name="ReplaceButtonPanel"
-                                    Grid.Row="1"
-                                    Grid.Column="2"
-                                    Margin="0,10,0,0"
-                                    Orientation="Horizontal"
-                                    Visibility="Collapsed">
-                            <Button x:Name="ReplaceOneButton"
-                                    MinWidth="90"
-                                    Height="32"
-                                    Margin="0,0,10,0"
-                                    Padding="18,0"
-                                    Background="{DynamicResource SurfaceRaisedBrush}"
-                                    BorderBrush="{DynamicResource PopupBorderBrush}"
-                                    Foreground="{DynamicResource MenuForegroundBrush}"
-                                    Click="ReplaceOneButton_OnClick"
-                                    Content="Replace" />
-                            <Button x:Name="ReplaceAllButton"
-                                    MinWidth="100"
-                                    Height="32"
-                                    Padding="18,0"
-                                    Background="{DynamicResource SurfaceRaisedBrush}"
-                                    BorderBrush="{DynamicResource PopupBorderBrush}"
-                                    Foreground="{DynamicResource MenuForegroundBrush}"
-                                    Click="ReplaceAllButton_OnClick"
-                                    Content="Replace all" />
-                        </StackPanel>
+                <Border x:Name="StatusChrome" DockPanel.Dock="Bottom" Background="{DynamicResource StatusBrush}">
+                    <StackPanel Orientation="Horizontal" Height="26" Margin="12,0">
+                        <TextBlock x:Name="CaretText" Style="{StaticResource StatusTextStyle}" Text="Ln 1, Col 1" />
+                        <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
+                        <TextBlock x:Name="SelectionText" Style="{StaticResource StatusTextStyle}" Visibility="Collapsed" />
+                        <Border x:Name="SelectionDivider" Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" Visibility="Collapsed" />
+                        <TextBlock x:Name="ZoomText" Style="{StaticResource StatusTextStyle}" Text="100%" />
+                        <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
+                        <TextBlock x:Name="LineEndingText" Style="{StaticResource StatusTextStyle}" Text="Windows (CRLF)" />
+                        <Border Width="1" Height="14" Margin="14,0" Background="{DynamicResource DividerBrush}" Opacity="0.5" VerticalAlignment="Center" />
+                        <TextBlock x:Name="EncodingText" Style="{StaticResource StatusTextStyle}" Text="UTF-8" />
+                    </StackPanel>
+                </Border>
+
+                <Grid Background="{DynamicResource EditorBackgroundBrush}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <TextBox x:Name="EditorTextBox"
+                                 Style="{StaticResource EditorTextBoxStyle}"
+                                 TextChanged="EditorTextBox_OnTextChanged"
+                                 SelectionChanged="EditorTextBox_OnSelectionChanged" />
+
+                        <Border x:Name="StreamingBadge"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Top"
+                                Margin="0,10,16,0"
+                                Padding="10,4"
+                                Background="{DynamicResource AccentSoftBrush}"
+                                CornerRadius="12"
+                                Visibility="Collapsed">
+                            <TextBlock x:Name="LoadingText"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       FontSize="11"
+                                       Text="Loading…" />
+                        </Border>
                     </Grid>
-                </Border>
 
-                <TextBox x:Name="EditorTextBox"
-                         Grid.Row="1"
-                         Style="{StaticResource EditorTextBoxStyle}"
-                         TextChanged="EditorTextBox_OnTextChanged"
-                         SelectionChanged="EditorTextBox_OnSelectionChanged" />
+                    <Border x:Name="FindPanel"
+                            Grid.Row="1"
+                            Background="{DynamicResource ChromeBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0,1,0,0"
+                            Padding="12,8"
+                            Visibility="Collapsed">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="Find"
+                                           Foreground="{DynamicResource MenuForegroundBrush}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center"
+                                           Width="56" />
+                                <TextBox x:Name="FindTextBox"
+                                         Style="{StaticResource FindTextBoxStyle}"
+                                         Width="260"
+                                         TextChanged="FindTextBox_OnTextChanged"
+                                         KeyDown="FindTextBox_OnKeyDown" />
+                                <Button Style="{StaticResource FindActionButtonStyle}"
+                                        Width="32" Padding="0" Margin="4,0,0,0"
+                                        Click="FindPreviousButton_OnClick"
+                                        ToolTip="Previous (Shift+F3)">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="13" Text="&#xE760;" />
+                                </Button>
+                                <Button Style="{StaticResource FindActionButtonStyle}"
+                                        Width="32" Padding="0" Margin="3,0,0,0"
+                                        Click="FindNextButton_OnClick"
+                                        ToolTip="Next (F3)">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="13" Text="&#xE761;" />
+                                </Button>
+                                <CheckBox x:Name="MatchCaseCheckBox"
+                                          Content="Match case"
+                                          Foreground="{DynamicResource MenuForegroundBrush}"
+                                          FontSize="12"
+                                          VerticalAlignment="Center"
+                                          Margin="12,0,0,0" />
+                                <CheckBox x:Name="WholeWordCheckBox"
+                                          Content="Whole word"
+                                          Foreground="{DynamicResource MenuForegroundBrush}"
+                                          FontSize="12"
+                                          VerticalAlignment="Center"
+                                          Margin="10,0,0,0" />
+                                <CheckBox x:Name="UseRegexCheckBox"
+                                          Content="Regex"
+                                          Foreground="{DynamicResource MenuForegroundBrush}"
+                                          FontSize="12"
+                                          VerticalAlignment="Center"
+                                          Margin="10,0,0,0" />
+                                <Button Style="{StaticResource FindActionButtonStyle}"
+                                        Width="32" Padding="0" Margin="14,0,0,0"
+                                        Click="CloseFindPanelButton_OnClick"
+                                        ToolTip="Close (Escape)">
+                                    <TextBlock FontFamily="Segoe Fluent Icons" FontSize="11" Text="&#xE711;" />
+                                </Button>
+                            </StackPanel>
 
-                <Border x:Name="StreamingBadge"
-                        Grid.Row="1"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Top"
-                        Margin="0,10,18,0"
-                        Padding="10,4"
-                        Background="#A0191030"
-                        CornerRadius="6"
-                        Visibility="Collapsed">
-                    <TextBlock x:Name="LoadingText"
-                               Foreground="#D9D3F5"
-                               FontSize="12"
-                               Text="Loading..." />
-                </Border>
-
-                <Popup x:Name="FileMenuPopup" PlacementTarget="{Binding ElementName=FileMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                    <Border Style="{StaticResource PopupBorderStyle}" Width="250">
-                        <StackPanel Margin="4">
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="NewFileMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="New tab" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+N" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="NewWindowMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="New window" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+Shift+N" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertBodyButton_OnClick"><TextBlock Text="New Markdown tab" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="OpenButton_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Open" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+O" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Recent" /><TextBlock Grid.Column="1" Opacity="0.7" Text="›" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="SaveMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Save" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+S" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="SaveAsMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Save as" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+Shift+S" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Save all" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+Alt+S" /></Grid></Button>
-                            <Border Height="1" Margin="8,4" Background="{DynamicResource PopupBorderBrush}" />
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><TextBlock Text="Page setup" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Print" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+P" /></Grid></Button>
-                            <Border Height="1" Margin="8,4" Background="{DynamicResource PopupBorderBrush}" />
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="CloseTabButton_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Close tab" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+W" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="CloseWindowButton_OnClick"><TextBlock Text="Close window" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="ExitMenuItem_OnClick"><TextBlock Text="Exit" /></Button>
+                            <StackPanel x:Name="ReplaceRowPanel"
+                                        Orientation="Horizontal"
+                                        VerticalAlignment="Center"
+                                        Margin="0,6,0,0"
+                                        Visibility="Collapsed">
+                                <TextBlock Text="Replace"
+                                           Foreground="{DynamicResource MenuForegroundBrush}"
+                                           FontSize="12"
+                                           VerticalAlignment="Center"
+                                           Width="56" />
+                                <TextBox x:Name="ReplaceTextBox"
+                                         Style="{StaticResource FindTextBoxStyle}"
+                                         Width="260" />
+                                <Button Style="{StaticResource FindActionButtonStyle}"
+                                        Content="Replace"
+                                        Margin="4,0,0,0"
+                                        Click="ReplaceOneButton_OnClick" />
+                                <Button Style="{StaticResource FindActionButtonStyle}"
+                                        Content="Replace all"
+                                        Margin="4,0,0,0"
+                                        Click="ReplaceAllButton_OnClick" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
-                </Popup>
+                </Grid>
 
-                <Popup x:Name="EditMenuPopup" PlacementTarget="{Binding ElementName=EditMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                    <Border Style="{StaticResource PopupBorderStyle}" Width="262">
-                        <StackPanel Margin="4">
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="UndoMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Undo" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+Z" /></Grid></Button>
-                            <Border Height="1" Margin="8,4" Background="{DynamicResource PopupBorderBrush}" />
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="CutMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Cut" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+X" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="CopyMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Copy" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+C" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="PasteMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Paste" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+V" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Delete" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Del" /></Grid></Button>
-                            <Border Height="1" Margin="8,4" Background="{DynamicResource PopupBorderBrush}" />
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="ClearFormattingButton_OnClick"><TextBlock Text="Clear formatting" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Search with Bing" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+E" /></Grid></Button>
-                            <Border Height="1" Margin="8,4" Background="{DynamicResource PopupBorderBrush}" />
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="FindButton_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Find" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+F" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Find next" /><TextBlock Grid.Column="1" Opacity="0.7" Text="F3" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Find previous" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Shift+F3" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Replace" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+H" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Go to" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+G" /></Grid></Button>
-                            <Border Height="1" Margin="8,4" Background="{DynamicResource PopupBorderBrush}" />
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="SelectAllMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Select all" /><TextBlock Grid.Column="1" Opacity="0.7" Text="Ctrl+A" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertTimeDateButton_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Time/Date" /><TextBlock Grid.Column="1" Opacity="0.7" Text="F5" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="FontMenuItem_OnClick"><TextBlock Text="Font" /></Button>
-                        </StackPanel>
-                    </Border>
-                </Popup>
+            </DockPanel>
+        </Border>
 
-                <Popup x:Name="ViewMenuPopup" PlacementTarget="{Binding ElementName=ViewMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                    <Border Style="{StaticResource PopupBorderStyle}" Width="230">
-                        <StackPanel Margin="4">
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Zoom" /><TextBlock Grid.Column="1" Opacity="0.7" Text="›" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="StatusBarMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="20" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><TextBlock x:Name="StatusBarCheckGlyph" Text="✓" Opacity="0.8" /><TextBlock Grid.Column="1" Text="Status bar" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="WordWrapMenuItem_OnClick"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="20" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><TextBlock x:Name="WordWrapCheckGlyph" Text="✓" Opacity="0.8" /><TextBlock Grid.Column="1" Text="Word wrap" /></Grid></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Markdown" /><TextBlock Grid.Column="1" Opacity="0.7" Text="›" /></Grid></Button>
-                        </StackPanel>
-                    </Border>
-                </Popup>
+        <Popup x:Name="FileMenuPopup"
+               PlacementTarget="{Binding ElementName=FileMenuButton}"
+               Placement="Bottom"
+               StaysOpen="False"
+               AllowsTransparency="True">
+            <Border Style="{StaticResource PopupBorderStyle}" Width="230">
+                <StackPanel>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="NewFileMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="New"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+N"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="NewWindowMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="New window"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Shift+N"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="OpenButton_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Open…"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+O"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="ReloadButton_OnClick">
+                        <TextBlock Text="Reload from disk"/>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="SaveMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Save"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+S"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="SaveAsMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Save as…"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Shift+S"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="PageSetupMenuItem_OnClick">
+                        <TextBlock Text="Page setup…"/>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="PrintMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Print…"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+P"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="ExitMenuItem_OnClick">
+                        <TextBlock Text="Exit"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Popup>
 
-                <Popup x:Name="HeadingPopup" PlacementTarget="{Binding ElementName=HeadingMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                    <Border Style="{StaticResource PopupBorderStyle}" Width="180">
-                        <StackPanel Margin="6">
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertTitleButton_OnClick"><TextBlock FontSize="26" Text="Title" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertSubtitleButton_OnClick"><TextBlock FontSize="20" Text="Subtitle" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertHeadingButton_OnClick"><TextBlock FontSize="16" Text="Heading" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertSubheadingButton_OnClick"><TextBlock FontSize="13" Text="Subheading" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertSectionButton_OnClick"><TextBlock FontSize="13" Text="Section" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertSubsectionButton_OnClick"><TextBlock FontSize="12" Text="Subsection" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertBodyButton_OnClick"><Border Background="{DynamicResource MenuSelectionBrush}" CornerRadius="4" Padding="6,2"><TextBlock Text="Body" /></Border></Button>
-                        </StackPanel>
-                    </Border>
-                </Popup>
+        <Popup x:Name="EditMenuPopup"
+               PlacementTarget="{Binding ElementName=EditMenuButton}"
+               Placement="Bottom"
+               StaysOpen="False"
+               AllowsTransparency="True">
+            <Border Style="{StaticResource PopupBorderStyle}" Width="250">
+                <StackPanel>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="UndoMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Undo"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Z"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="RedoMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Redo"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Y"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="CutMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Cut"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+X"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="CopyMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Copy"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+C"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="PasteMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Paste"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+V"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="FindButton_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Find…"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+F"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="FindAndReplaceButton_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Find and replace…"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+H"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="GoToMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Go to line…"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+G"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="SelectAllMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Select all"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+A"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="InsertTimeDateButton_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Time/Date"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="F5"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="FontMenuItem_OnClick">
+                        <TextBlock Text="Font…"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Popup>
 
-                <Popup x:Name="ListPopup" PlacementTarget="{Binding ElementName=ListMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                    <Border Style="{StaticResource PopupBorderStyle}" Width="190">
-                        <StackPanel Margin="4">
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="BulletListButton_OnClick"><TextBlock Text="Bulleted list" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="NumberedListButton_OnClick"><TextBlock Text="Numbered list" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><TextBlock Text="Increase indent" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><TextBlock Text="Decrease indent" /></Button>
-                        </StackPanel>
-                    </Border>
-                </Popup>
+        <Popup x:Name="ViewMenuPopup"
+               PlacementTarget="{Binding ElementName=ViewMenuButton}"
+               Placement="Bottom"
+               StaysOpen="False"
+               AllowsTransparency="True">
+            <Border Style="{StaticResource PopupBorderStyle}" Width="240">
+                <StackPanel>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="ZoomInMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Zoom in"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl++"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="ZoomOutMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Zoom out"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+-"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="RestoreZoomMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Restore default zoom"/>
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+0"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="WordWrapMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="WordWrapCheckGlyph" FontFamily="Segoe Fluent Icons" FontSize="12" Text="&#xE73E;" Opacity="0" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="Word wrap"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="StatusBarMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="StatusBarCheckGlyph" FontFamily="Segoe Fluent Icons" FontSize="12" Text="&#xE73E;" Opacity="0.85" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="Status bar"/>
+                        </Grid>
+                    </Button>
+                    <Border Height="1" Margin="8,2" Background="{DynamicResource PopupBorderBrush}" />
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="LightThemeMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="LightThemeGlyph" FontFamily="Segoe Fluent Icons" FontSize="12" Text="&#xE73E;" Opacity="0" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="Light theme"/>
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="DarkThemeMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="DarkThemeGlyph" FontFamily="Segoe Fluent Icons" FontSize="12" Text="&#xE73E;" Opacity="0.85" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="Dark theme"/>
+                        </Grid>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Popup>
 
-                <Popup x:Name="TablePopup" PlacementTarget="{Binding ElementName=TableMenuButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
-                    <Border Style="{StaticResource PopupBorderStyle}" Width="202">
-                        <StackPanel Margin="10">
-                            <TextBlock Margin="4,0,0,8" Foreground="{DynamicResource MenuForegroundBrush}" Text="Insert table" />
-                            <UniformGrid Rows="5" Columns="5" Margin="0,0,0,10">
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                                <Border Margin="4" Width="28" Height="28" BorderBrush="#C3BECC" BorderThickness="1" CornerRadius="4" />
-                            </UniformGrid>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" Click="TableButton_OnClick"><TextBlock Text="Insert table" /></Button>
-                            <Button Style="{StaticResource PopupRowButtonStyle}" IsEnabled="False"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock Text="Edit table" /><TextBlock Grid.Column="1" Opacity="0.7" Text="›" /></Grid></Button>
-                        </StackPanel>
-                    </Border>
-                </Popup>
-            </Grid>
-        </DockPanel>
-    </Border>
+    </Grid>
+
 </Window>

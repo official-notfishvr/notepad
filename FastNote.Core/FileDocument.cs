@@ -5,12 +5,12 @@ using Microsoft.Win32.SafeHandles;
 
 namespace FastNote.Core;
 
-public sealed class LargeFileDocument : IDisposable
+public sealed class FileDocument : IDisposable
 {
     private const int ScanBufferSize = 1024 * 1024;
-    private const int InitialScanBytes = 2 * 1024 * 1024;
-    private const int InitialTargetLines = 6000;
-    private const int MaxVisibleCharsPerLine = 2048;
+    private const int InitialScanBytes = 4 * 1024 * 1024;
+    private const int InitialTargetLines = 10000;
+    private const int MaxVisibleCharsPerLine = 4096;
 
     private readonly SafeFileHandle _handle;
     private readonly object _stateGate = new();
@@ -23,7 +23,7 @@ public sealed class LargeFileDocument : IDisposable
     private bool _isIndexComplete;
     private FileLoadProgress _latestProgress;
 
-    private LargeFileDocument(
+    private FileDocument(
         string path,
         long fileSizeBytes,
         Encoding encoding,
@@ -50,62 +50,34 @@ public sealed class LargeFileDocument : IDisposable
     public event EventHandler<FileLoadProgress>? ProgressChanged;
 
     public string Path { get; }
-
     public long FileSizeBytes { get; }
-
     public string EncodingName { get; }
+    public TimeSpan InitialOpenDuration { get; }
+    public TimeSpan IndexDuration { get; private set; }
 
     public long LineCount
     {
-        get
-        {
-            lock (_stateGate)
-            {
-                return _lineStarts.Count;
-            }
-        }
+        get { lock (_stateGate) { return _lineStarts.Count; } }
     }
 
     public long IndexedLineCount => LineCount;
 
     public bool IsIndexComplete
     {
-        get
-        {
-            lock (_stateGate)
-            {
-                return _isIndexComplete;
-            }
-        }
+        get { lock (_stateGate) { return _isIndexComplete; } }
     }
 
     public long BytesIndexed
     {
-        get
-        {
-            lock (_stateGate)
-            {
-                return _scanPosition;
-            }
-        }
+        get { lock (_stateGate) { return _scanPosition; } }
     }
-
-    public TimeSpan InitialOpenDuration { get; }
-
-    public TimeSpan IndexDuration { get; private set; }
 
     public FileLoadProgress LatestProgress
     {
-        get
-        {
-            lock (_stateGate)
-            {
-                return _latestProgress;
-            }
-        }
+        get { lock (_stateGate) { return _latestProgress; } }
     }
 
-    public static Task<LargeFileDocument> OpenAsync(
+    public static Task<FileDocument> OpenAsync(
         string path,
         IProgress<FileLoadProgress>? progress = null,
         CancellationToken cancellationToken = default)
@@ -169,7 +141,7 @@ public sealed class LargeFileDocument : IDisposable
         _scanCancellation.Dispose();
     }
 
-    private static LargeFileDocument OpenInternal(
+    private static FileDocument OpenInternal(
         string path,
         IProgress<FileLoadProgress>? progress,
         CancellationToken cancellationToken)
@@ -207,7 +179,7 @@ public sealed class LargeFileDocument : IDisposable
         var latestProgress = new FileLoadProgress(path, initialPosition, fileLength, lineStarts.Count);
         var handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 
-        var document = new LargeFileDocument(
+        var document = new FileDocument(
             path,
             fileLength,
             encoding,
@@ -260,9 +232,13 @@ public sealed class LargeFileDocument : IDisposable
                     {
                         for (var i = 0; i < read; i++)
                         {
-                            if (buffer[i] == (byte)'\n' && absolutePosition + i + 1 < FileSizeBytes)
+                            if (buffer[i] == (byte)'\n')
                             {
-                                _lineStarts.Add(absolutePosition + i + 1);
+                                var nextPos = absolutePosition + i + 1;
+                                if (nextPos < FileSizeBytes)
+                                {
+                                    _lineStarts.Add(nextPos);
+                                }
                             }
                         }
 
@@ -342,9 +318,13 @@ public sealed class LargeFileDocument : IDisposable
 
                 for (var i = 0; i < read; i++)
                 {
-                    if (buffer[i] == (byte)'\n' && absolutePosition + i + 1 < fileLength)
+                    if (buffer[i] == (byte)'\n')
                     {
-                        lineStarts.Add(absolutePosition + i + 1);
+                        var nextPos = absolutePosition + i + 1;
+                        if (nextPos < fileLength)
+                        {
+                            lineStarts.Add(nextPos);
+                        }
                     }
                 }
 
@@ -364,7 +344,7 @@ public sealed class LargeFileDocument : IDisposable
     private static int EstimateLineCapacity(long fileLength)
     {
         var estimate = fileLength / 48;
-        estimate = Math.Clamp(estimate, 4_096, 8_000_000);
+        estimate = Math.Clamp(estimate, 4_096, 10_000_000);
         return (int)estimate;
     }
 
@@ -378,6 +358,18 @@ public sealed class LargeFileDocument : IDisposable
         {
             startOffset = 3;
             return new UTF8Encoding(false, false);
+        }
+
+        if (read >= 2 && bom[0] == 0xFF && bom[1] == 0xFE)
+        {
+            startOffset = 2;
+            return new UnicodeEncoding(false, false);
+        }
+
+        if (read >= 2 && bom[0] == 0xFE && bom[1] == 0xFF)
+        {
+            startOffset = 2;
+            return new UnicodeEncoding(true, false);
         }
 
         startOffset = 0;
@@ -417,7 +409,7 @@ public sealed class LargeFileDocument : IDisposable
             break;
         }
 
-        var bytesToRead = (int)Math.Min(rawLength, 64 * 1024);
+        var bytesToRead = (int)Math.Min(rawLength, 128 * 1024);
         if (bytesToRead == 0)
         {
             return string.Empty;
@@ -435,7 +427,7 @@ public sealed class LargeFileDocument : IDisposable
             var line = DecodeLine(buffer.AsSpan(0, bytesToRead));
             if (rawLength > bytesToRead || line.Length > MaxVisibleCharsPerLine)
             {
-                line = line[..Math.Min(line.Length, MaxVisibleCharsPerLine)] + " ...";
+                line = line[..Math.Min(line.Length, MaxVisibleCharsPerLine)] + " …";
             }
 
             return line;

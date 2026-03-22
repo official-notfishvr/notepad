@@ -13,7 +13,7 @@ public sealed class DocumentViewport : FrameworkElement
             nameof(Background),
             typeof(Brush),
             typeof(DocumentViewport),
-            new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
+            new FrameworkPropertyMetadata(Brushes.Transparent, FrameworkPropertyMetadataOptions.AffectsRender));
 
     public static readonly DependencyProperty EditorFontSizeProperty =
         DependencyProperty.Register(
@@ -29,12 +29,20 @@ public sealed class DocumentViewport : FrameworkElement
             typeof(DocumentViewport),
             new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    public static readonly DependencyProperty ShowLineNumbersProperty =
+        DependencyProperty.Register(
+            nameof(ShowLineNumbers),
+            typeof(bool),
+            typeof(DocumentViewport),
+            new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+
     private readonly Typeface _typeface =
         new(new FontFamily("Consolas"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
 
-    private LargeFileDocument? _document;
+    private FileDocument? _document;
     private long _topLine;
     private double _lineHeight = 20;
+    private double _scrollAccumulator;
 
     public event EventHandler? TopLineChanged;
 
@@ -56,7 +64,13 @@ public sealed class DocumentViewport : FrameworkElement
         set => SetValue(WrapTextProperty, value);
     }
 
-    public LargeFileDocument? Document
+    public bool ShowLineNumbers
+    {
+        get => (bool)GetValue(ShowLineNumbersProperty);
+        set => SetValue(ShowLineNumbersProperty, value);
+    }
+
+    public FileDocument? Document
     {
         get => _document;
         set
@@ -68,6 +82,7 @@ public sealed class DocumentViewport : FrameworkElement
 
             _document = value;
             _topLine = 0;
+            _scrollAccumulator = 0;
 
             if (_document is not null)
             {
@@ -91,25 +106,38 @@ public sealed class DocumentViewport : FrameworkElement
 
         if (_document is null)
         {
-            DrawCenteredMessage(drawingContext, "Open or drop a text file");
+            DrawCenteredMessage(drawingContext, "Open or drop a text file to get started");
             return;
         }
 
         var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var textBrush = GetBrush("EditorForegroundBrush", new SolidColorBrush(Color.FromRgb(36, 39, 45)));
+        var textBrush = GetBrush("EditorForegroundBrush", new SolidColorBrush(Color.FromRgb(255, 255, 255)));
+        var mutedBrush = GetBrush("EditorMutedBrush", new SolidColorBrush(Color.FromRgb(110, 110, 110)));
         var sample = CreateFormattedText("Hg", pixelsPerDip, textBrush);
-        _lineHeight = sample.Height + 4;
+        _lineHeight = sample.Height + 5;
 
-        var paddingX = 10d;
-        var lineWidth = Math.Max(80, ActualWidth - paddingX * 2);
-        var lines = _document.ReadLines(_topLine, VisibleLineCount + 2);
+        var lineNumberWidth = ShowLineNumbers ? MeasureLineNumberWidth(pixelsPerDip, mutedBrush) + 12 : 0;
+        var paddingX = 14d + lineNumberWidth;
+        var lineWidth = Math.Max(80, ActualWidth - paddingX - 14);
+        var lines = _document.ReadLines(_topLine, VisibleLineCount + 4);
 
         for (var i = 0; i < lines.Count; i++)
         {
-            var y = i * _lineHeight + 6;
-            if (y > ActualHeight)
+            var y = i * _lineHeight + 8;
+            if (y > ActualHeight + _lineHeight)
             {
                 break;
+            }
+
+            if (ShowLineNumbers)
+            {
+                var lineNum = CreateFormattedText(
+                    (_topLine + i + 1).ToString(),
+                    pixelsPerDip,
+                    mutedBrush);
+                lineNum.TextAlignment = TextAlignment.Right;
+                lineNum.MaxTextWidth = lineNumberWidth - 8;
+                drawingContext.DrawText(lineNum, new Point(6, y));
             }
 
             var contentText = CreateFormattedText(lines[i], pixelsPerDip, textBrush);
@@ -123,7 +151,7 @@ public sealed class DocumentViewport : FrameworkElement
 
         if (!_document.IsIndexComplete)
         {
-            DrawLoadingHint(drawingContext, pixelsPerDip);
+            DrawLoadingHint(drawingContext, pixelsPerDip, mutedBrush);
         }
     }
 
@@ -134,7 +162,14 @@ public sealed class DocumentViewport : FrameworkElement
             return;
         }
 
-        ScrollLines(e.Delta > 0 ? -3 : 3);
+        _scrollAccumulator -= e.Delta / 120.0 * 3;
+        var linesToScroll = (int)_scrollAccumulator;
+        if (linesToScroll != 0)
+        {
+            _scrollAccumulator -= linesToScroll;
+            ScrollLines(linesToScroll);
+        }
+
         e.Handled = true;
     }
 
@@ -213,6 +248,14 @@ public sealed class DocumentViewport : FrameworkElement
         });
     }
 
+    private double MeasureLineNumberWidth(double pixelsPerDip, Brush brush)
+    {
+        var totalLines = _document?.EstimateTotalLineCount() ?? 1;
+        var digits = Math.Max(4, totalLines.ToString().Length);
+        var sample = CreateFormattedText(new string('9', digits), pixelsPerDip, brush);
+        return sample.Width;
+    }
+
     private FormattedText CreateFormattedText(string text, double pixelsPerDip, Brush foreground)
     {
         return new FormattedText(
@@ -228,17 +271,18 @@ public sealed class DocumentViewport : FrameworkElement
     private void DrawCenteredMessage(DrawingContext drawingContext, string message)
     {
         var pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-        var text = CreateFormattedText(message, pixelsPerDip, GetBrush("EditorMutedBrush", new SolidColorBrush(Color.FromRgb(110, 113, 120))));
+        var mutedBrush = GetBrush("EditorMutedBrush", new SolidColorBrush(Color.FromRgb(110, 110, 110)));
+        var text = CreateFormattedText(message, pixelsPerDip, mutedBrush);
         drawingContext.DrawText(text, new Point((ActualWidth - text.Width) / 2, (ActualHeight - text.Height) / 2));
     }
 
-    private void DrawLoadingHint(DrawingContext drawingContext, double pixelsPerDip)
+    private void DrawLoadingHint(DrawingContext drawingContext, double pixelsPerDip, Brush mutedBrush)
     {
         var hint = CreateFormattedText(
-            "Loading more lines...",
+            "Indexing…",
             pixelsPerDip,
-            GetBrush("EditorMutedBrush", new SolidColorBrush(Color.FromRgb(110, 113, 120))));
-        drawingContext.DrawText(hint, new Point(Math.Max(12, ActualWidth - hint.Width - 18), Math.Max(10, ActualHeight - hint.Height - 10)));
+            mutedBrush);
+        drawingContext.DrawText(hint, new Point(Math.Max(12, ActualWidth - hint.Width - 18), Math.Max(10, ActualHeight - hint.Height - 12)));
     }
 
     private static Brush GetBrush(string key, Brush fallback)

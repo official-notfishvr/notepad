@@ -1,8 +1,8 @@
-using FastNote.Core;
-using ICSharpCode.AvalonEdit.Document;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using FastNote.Core;
+using ICSharpCode.AvalonEdit.Document;
 
 namespace FastNote.App;
 
@@ -11,7 +11,7 @@ public partial class MainWindow
     private enum AppThemeMode
     {
         Light,
-        Dark
+        Dark,
     }
 
     private sealed class DocumentTab
@@ -47,7 +47,10 @@ public partial class MainWindow
             get
             {
                 var name = string.IsNullOrWhiteSpace(Path) ? Title : System.IO.Path.GetFileName(Path);
-                var suffix = IsLoading ? " \u2026" : IsDirty ? " \u25CF" : string.Empty;
+                var suffix =
+                    IsLoading ? " \u2026"
+                    : IsDirty ? " \u25CF"
+                    : string.Empty;
                 return name + suffix;
             }
         }
@@ -82,7 +85,7 @@ public sealed class GoToLineDialog : Window
             Text = "Line number:",
             Foreground = fg,
             FontSize = 12,
-            Margin = new Thickness(0, 0, 0, 6)
+            Margin = new Thickness(0, 0, 0, 6),
         };
         Grid.SetRow(label, 0);
 
@@ -91,16 +94,12 @@ public sealed class GoToLineDialog : Window
             Text = currentLine.ToString(),
             FontSize = 13,
             Height = 30,
-            Margin = new Thickness(0, 0, 0, 12)
+            Margin = new Thickness(0, 0, 0, 12),
         };
         _lineBox.SelectAll();
         Grid.SetRow(_lineBox, 1);
 
-        var buttonPanel = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right
-        };
+        var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
         Grid.SetRow(buttonPanel, 2);
 
         var goButton = new Button
@@ -109,7 +108,7 @@ public sealed class GoToLineDialog : Window
             Width = 72,
             Height = 28,
             Margin = new Thickness(0, 0, 8, 0),
-            IsDefault = true
+            IsDefault = true,
         };
         goButton.Click += (_, _) =>
         {
@@ -125,7 +124,7 @@ public sealed class GoToLineDialog : Window
             Content = "Cancel",
             Width = 72,
             Height = 28,
-            IsCancel = true
+            IsCancel = true,
         };
 
         buttonPanel.Children.Add(goButton);
@@ -199,7 +198,8 @@ public sealed class FontPickerDialog : Window
         }
 
         _fontList.SelectedItem = family.Source;
-        _styleList.SelectedItem = weight == FontWeights.Bold && style == FontStyles.Italic ? "Bold Italic"
+        _styleList.SelectedItem =
+            weight == FontWeights.Bold && style == FontStyles.Italic ? "Bold Italic"
             : weight == FontWeights.Bold ? "Bold"
             : style == FontStyles.Italic ? "Italic"
             : "Regular";
@@ -222,7 +222,7 @@ public sealed class FontPickerDialog : Window
             Foreground = fg,
             FontSize = 14,
             Margin = new Thickness(0, 10, 0, 10),
-            TextWrapping = TextWrapping.Wrap
+            TextWrapping = TextWrapping.Wrap,
         };
         Grid.SetRow(_preview, 1);
 
@@ -230,12 +230,25 @@ public sealed class FontPickerDialog : Window
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Margin = new Thickness(0, 6, 0, 0)
+            Margin = new Thickness(0, 6, 0, 0),
         };
         Grid.SetRow(buttons, 2);
 
-        var ok = new Button { Content = "OK", Width = 72, Height = 28, Margin = new Thickness(0, 0, 8, 0), IsDefault = true };
-        var cancel = new Button { Content = "Cancel", Width = 72, Height = 28, IsCancel = true };
+        var ok = new Button
+        {
+            Content = "OK",
+            Width = 72,
+            Height = 28,
+            Margin = new Thickness(0, 0, 8, 0),
+            IsDefault = true,
+        };
+        var cancel = new Button
+        {
+            Content = "Cancel",
+            Width = 72,
+            Height = 28,
+            IsCancel = true,
+        };
 
         ok.Click += (_, _) =>
         {
@@ -260,7 +273,7 @@ public sealed class FontPickerDialog : Window
             Foreground = fg,
             BorderThickness = new Thickness(1),
             Margin = new Thickness(0, 0, 6, 0),
-            FontSize = 12
+            FontSize = 12,
         };
     }
 

@@ -99,10 +99,13 @@ public partial class MainWindow
     private void FlashNotFound()
     {
         FindTextBox.Background = GetResourceBrush("FindNotFoundBrush", Color.FromArgb(0x55, 0xC4, 0x2B, 0x1C));
-        FindTextBox.Dispatcher.BeginInvoke(() =>
-        {
-            FindTextBox.Background = GetResourceBrush("InputBackgroundBrush", Color.FromArgb(0xFF, 0x33, 0x33, 0x33));
-        }, System.Windows.Threading.DispatcherPriority.Background);
+        FindTextBox.Dispatcher.BeginInvoke(
+            () =>
+            {
+                FindTextBox.Background = GetResourceBrush("InputBackgroundBrush", Color.FromArgb(0xFF, 0x33, 0x33, 0x33));
+            },
+            System.Windows.Threading.DispatcherPriority.Background
+        );
         ResetFindHighlight();
         UpdateMatchCountLabel();
     }
@@ -129,8 +132,7 @@ public partial class MainWindow
 
         if (index >= 0 && wholeWord)
         {
-            if ((index > 0 && char.IsLetterOrDigit(text[index - 1])) ||
-                (index + query.Length < text.Length && char.IsLetterOrDigit(text[index + query.Length])))
+            if ((index > 0 && char.IsLetterOrDigit(text[index - 1])) || (index + query.Length < text.Length && char.IsLetterOrDigit(text[index + query.Length])))
             {
                 return -1;
             }
@@ -197,9 +199,7 @@ public partial class MainWindow
                         break;
                     }
 
-                    var valid = !wholeWord ||
-                        ((idx == 0 || !char.IsLetterOrDigit(text[idx - 1])) &&
-                         (idx + query.Length >= text.Length || !char.IsLetterOrDigit(text[idx + query.Length])));
+                    var valid = !wholeWord || ((idx == 0 || !char.IsLetterOrDigit(text[idx - 1])) && (idx + query.Length >= text.Length || !char.IsLetterOrDigit(text[idx + query.Length])));
 
                     if (valid)
                     {
@@ -210,9 +210,7 @@ public partial class MainWindow
                 }
             }
         }
-        catch
-        {
-        }
+        catch { }
 
         return results;
     }
@@ -269,32 +267,40 @@ public partial class MainWindow
         var matchCase = MatchCaseCheckBox.IsChecked == true;
         var wholeWord = WholeWordCheckBox.IsChecked == true;
 
-        _ = Task.Run(() =>
-        {
-            token.ThrowIfCancellationRequested();
-            return CountMatches(text, query, currentSelectionStart, useRegex, matchCase, wholeWord, token);
-        }, token).ContinueWith(task =>
-        {
-            if (token.IsCancellationRequested || task.IsCanceled || query != FindTextBox.Text)
-            {
-                return;
-            }
+        _ = Task.Run(
+                () =>
+                {
+                    token.ThrowIfCancellationRequested();
+                    return CountMatches(text, query, currentSelectionStart, useRegex, matchCase, wholeWord, token);
+                },
+                token
+            )
+            .ContinueWith(
+                task =>
+                {
+                    if (token.IsCancellationRequested || task.IsCanceled || query != FindTextBox.Text)
+                    {
+                        return;
+                    }
 
-            if (task.IsFaulted)
-            {
-                MatchCountText.Text = "Search failed";
-                MatchCountText.Visibility = Visibility.Visible;
-                return;
-            }
+                    if (task.IsFaulted)
+                    {
+                        MatchCountText.Text = "Search failed";
+                        MatchCountText.Visibility = Visibility.Visible;
+                        return;
+                    }
 
-            var (count, currentMatch) = task.Result;
-            MatchCountText.Text = count == 0
-                ? "No results"
-                : currentMatch > 0
-                    ? $"{currentMatch} of {count}"
-                    : $"{count} matches";
-            MatchCountText.Visibility = Visibility.Visible;
-        }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.FromCurrentSynchronizationContext());
+                    var (count, currentMatch) = task.Result;
+                    MatchCountText.Text =
+                        count == 0 ? "No results"
+                        : currentMatch > 0 ? $"{currentMatch} of {count}"
+                        : $"{count} matches";
+                    MatchCountText.Visibility = Visibility.Visible;
+                },
+                CancellationToken.None,
+                TaskContinuationOptions.None,
+                TaskScheduler.FromCurrentSynchronizationContext()
+            );
     }
 
     private void OpenFindPanel(bool showReplace)
@@ -324,10 +330,7 @@ public partial class MainWindow
 
         var documentLength = GetEditorDocumentLength();
         var currentLineNumber = EditorTextBox.Document?.GetLineByOffset(documentLength == 0 ? 0 : Math.Clamp(EditorTextBox.CaretOffset, 0, documentLength)).LineNumber ?? 1;
-        var dialog = new GoToLineDialog(currentLineNumber)
-        {
-            Owner = this
-        };
+        var dialog = new GoToLineDialog(currentLineNumber) { Owner = this };
 
         if (dialog.ShowDialog() == true && dialog.LineNumber > 0)
         {
@@ -391,6 +394,7 @@ public partial class MainWindow
     }
 
     private void FindNextButton_OnClick(object sender, RoutedEventArgs e) => FindNextInternal();
+
     private void FindPreviousButton_OnClick(object sender, RoutedEventArgs e) => FindPreviousInternal();
 
     private void ReplaceOneButton_OnClick(object sender, RoutedEventArgs e)
@@ -466,14 +470,7 @@ public partial class MainWindow
         return Application.Current.Resources[resourceKey] as Brush ?? new SolidColorBrush(fallbackColor);
     }
 
-    private static (int Count, int CurrentMatch) CountMatches(
-        string text,
-        string query,
-        int currentSelectionStart,
-        bool useRegex,
-        bool matchCase,
-        bool wholeWord,
-        CancellationToken cancellationToken)
+    private static (int Count, int CurrentMatch) CountMatches(string text, string query, int currentSelectionStart, bool useRegex, bool matchCase, bool wholeWord, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(query))
         {
@@ -521,9 +518,7 @@ public partial class MainWindow
                 break;
             }
 
-            var valid = !wholeWord ||
-                ((idx == 0 || !char.IsLetterOrDigit(text[idx - 1])) &&
-                 (idx + query.Length >= text.Length || !char.IsLetterOrDigit(text[idx + query.Length])));
+            var valid = !wholeWord || ((idx == 0 || !char.IsLetterOrDigit(text[idx - 1])) && (idx + query.Length >= text.Length || !char.IsLetterOrDigit(text[idx + query.Length])));
             if (valid)
             {
                 count++;

@@ -1,43 +1,22 @@
-using FastNote.Core;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using FastNote.Core;
 
 namespace FastNote.App.Controls;
 
 public sealed class DocumentViewport : FrameworkElement
 {
-    public static readonly DependencyProperty BackgroundProperty =
-        DependencyProperty.Register(
-            nameof(Background),
-            typeof(Brush),
-            typeof(DocumentViewport),
-            new FrameworkPropertyMetadata(Brushes.Transparent, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty BackgroundProperty = DependencyProperty.Register(nameof(Background), typeof(Brush), typeof(DocumentViewport), new FrameworkPropertyMetadata(Brushes.Transparent, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    public static readonly DependencyProperty EditorFontSizeProperty =
-        DependencyProperty.Register(
-            nameof(EditorFontSize),
-            typeof(double),
-            typeof(DocumentViewport),
-            new FrameworkPropertyMetadata(14d, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty EditorFontSizeProperty = DependencyProperty.Register(nameof(EditorFontSize), typeof(double), typeof(DocumentViewport), new FrameworkPropertyMetadata(14d, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    public static readonly DependencyProperty WrapTextProperty =
-        DependencyProperty.Register(
-            nameof(WrapText),
-            typeof(bool),
-            typeof(DocumentViewport),
-            new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty WrapTextProperty = DependencyProperty.Register(nameof(WrapText), typeof(bool), typeof(DocumentViewport), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    public static readonly DependencyProperty ShowLineNumbersProperty =
-        DependencyProperty.Register(
-            nameof(ShowLineNumbers),
-            typeof(bool),
-            typeof(DocumentViewport),
-            new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
+    public static readonly DependencyProperty ShowLineNumbersProperty = DependencyProperty.Register(nameof(ShowLineNumbers), typeof(bool), typeof(DocumentViewport), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 
-    private readonly Typeface _typeface =
-        new(new FontFamily("Consolas"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+    private readonly Typeface _typeface = new(new FontFamily("Consolas"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
 
     private FileDocument? _document;
     private long _topLine;
@@ -136,10 +115,7 @@ public sealed class DocumentViewport : FrameworkElement
 
             if (ShowLineNumbers)
             {
-                var lineNum = CreateFormattedText(
-                    (_topLine + i + 1).ToString(),
-                    pixelsPerDip,
-                    mutedBrush);
+                var lineNum = CreateFormattedText((_topLine + i + 1).ToString(), pixelsPerDip, mutedBrush);
                 lineNum.TextAlignment = TextAlignment.Right;
                 lineNum.MaxTextWidth = lineNumberWidth - 8;
                 drawingContext.DrawText(lineNum, new Point(6, y));
@@ -263,14 +239,7 @@ public sealed class DocumentViewport : FrameworkElement
 
     private FormattedText CreateFormattedText(string text, double pixelsPerDip, Brush foreground)
     {
-        return new FormattedText(
-            text,
-            CultureInfo.InvariantCulture,
-            FlowDirection.LeftToRight,
-            _typeface,
-            EditorFontSize,
-            foreground,
-            pixelsPerDip);
+        return new FormattedText(text, CultureInfo.InvariantCulture, FlowDirection.LeftToRight, _typeface, EditorFontSize, foreground, pixelsPerDip);
     }
 
     private void DrawCenteredMessage(DrawingContext drawingContext, string message)
@@ -283,10 +252,7 @@ public sealed class DocumentViewport : FrameworkElement
 
     private void DrawLoadingHint(DrawingContext drawingContext, double pixelsPerDip, Brush mutedBrush)
     {
-        var hint = CreateFormattedText(
-            "Indexing…",
-            pixelsPerDip,
-            mutedBrush);
+        var hint = CreateFormattedText("Indexing…", pixelsPerDip, mutedBrush);
         drawingContext.DrawText(hint, new Point(Math.Max(12, ActualWidth - hint.Width - 18), Math.Max(10, ActualHeight - hint.Height - 12)));
     }
 

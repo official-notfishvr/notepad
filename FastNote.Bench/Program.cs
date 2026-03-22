@@ -1,6 +1,6 @@
-using FastNote.Core;
 using System.Diagnostics;
 using System.Threading.Tasks;
+using FastNote.Core;
 
 if (args.Length == 0)
 {

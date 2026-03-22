@@ -48,9 +48,7 @@ public partial class MainWindow
         var document = EditorTextBox.Document;
         var documentLength = document?.TextLength ?? 0;
         var caretOffset = Math.Clamp(EditorTextBox.CaretOffset, 0, documentLength);
-        var line = document is null
-            ? null
-            : document.GetLineByOffset(documentLength == 0 ? 0 : caretOffset);
+        var line = document is null ? null : document.GetLineByOffset(documentLength == 0 ? 0 : caretOffset);
         var lineIndex = Math.Max(0, (line?.LineNumber ?? 1) - 1);
         var column = line is null ? 1 : caretOffset - line.Offset + 1;
 
@@ -161,8 +159,7 @@ public partial class MainWindow
     {
         if (Application.Current.Resources.Contains(key))
         {
-            Application.Current.Resources[key] = new SolidColorBrush(
-                (Color)ColorConverter.ConvertFromString(hexColor));
+            Application.Current.Resources[key] = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hexColor));
         }
     }
 
@@ -229,7 +226,7 @@ public partial class MainWindow
                 PageWidth = printDialog.PrintableAreaWidth,
                 PagePadding = new Thickness(60),
                 ColumnGap = 0,
-                ColumnWidth = printDialog.PrintableAreaWidth
+                ColumnWidth = printDialog.PrintableAreaWidth,
             };
 
             var paginator = ((IDocumentPaginatorSource)document).DocumentPaginator;
@@ -344,14 +341,7 @@ public partial class MainWindow
     {
         EditMenuPopup.IsOpen = false;
 
-        var dialog = new FontPickerDialog(
-            EditorTextBox.FontFamily,
-            EditorTextBox.FontStyle,
-            EditorTextBox.FontWeight,
-            EditorTextBox.FontSize)
-        {
-            Owner = this
-        };
+        var dialog = new FontPickerDialog(EditorTextBox.FontFamily, EditorTextBox.FontStyle, EditorTextBox.FontWeight, EditorTextBox.FontSize) { Owner = this };
 
         if (dialog.ShowDialog() == true)
         {
@@ -420,7 +410,9 @@ public partial class MainWindow
     private void Window_OnStateChanged(object? sender, EventArgs e) => UpdateWindowButtons();
 
     private void FileMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(FileMenuPopup);
+
     private void EditMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(EditMenuPopup);
+
     private void ViewMenuButton_OnClick(object sender, RoutedEventArgs e) => TogglePopup(ViewMenuPopup);
 
     private void TogglePopup(System.Windows.Controls.Primitives.Popup popup)

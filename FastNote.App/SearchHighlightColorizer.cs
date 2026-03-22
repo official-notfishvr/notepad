@@ -1,7 +1,7 @@
-using ICSharpCode.AvalonEdit.Document;
-using ICSharpCode.AvalonEdit.Rendering;
 using System.Text.RegularExpressions;
 using System.Windows.Media;
+using ICSharpCode.AvalonEdit.Document;
+using ICSharpCode.AvalonEdit.Rendering;
 
 namespace FastNote.App;
 
@@ -27,18 +27,22 @@ internal sealed class SearchHighlightColorizer : DocumentColorizingTransformer
         {
             var startOffset = line.Offset + match.Start;
             var endOffset = startOffset + match.Length;
-            ChangeLinePart(startOffset, endOffset, element =>
-            {
-                if (BackgroundBrush is not null)
+            ChangeLinePart(
+                startOffset,
+                endOffset,
+                element =>
                 {
-                    element.TextRunProperties.SetBackgroundBrush(BackgroundBrush);
-                }
+                    if (BackgroundBrush is not null)
+                    {
+                        element.TextRunProperties.SetBackgroundBrush(BackgroundBrush);
+                    }
 
-                if (ForegroundBrush is not null)
-                {
-                    element.TextRunProperties.SetForegroundBrush(ForegroundBrush);
+                    if (ForegroundBrush is not null)
+                    {
+                        element.TextRunProperties.SetForegroundBrush(ForegroundBrush);
+                    }
                 }
-            });
+            );
         }
     }
 

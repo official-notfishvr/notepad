@@ -1,9 +1,9 @@
-using ICSharpCode.AvalonEdit.Rendering;
-using ICSharpCode.AvalonEdit.Document;
 using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
+using ICSharpCode.AvalonEdit.Document;
+using ICSharpCode.AvalonEdit.Rendering;
 
 namespace FastNote.App;
 
@@ -49,10 +49,7 @@ public partial class MainWindow : Window
         _searchHighlightColorizer = new SearchHighlightColorizer();
         EditorTextBox.TextArea.TextView.LineTransformers.Add(_searchHighlightColorizer);
 
-        _statusRefreshTimer = new DispatcherTimer(DispatcherPriority.Background)
-        {
-            Interval = TimeSpan.FromMilliseconds(400)
-        };
+        _statusRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(400) };
         _statusRefreshTimer.Tick += (_, _) =>
         {
             var tab = GetActiveTab();
@@ -64,10 +61,7 @@ public partial class MainWindow : Window
             RefreshActiveTabUi();
         };
         _statusRefreshTimer.Start();
-        _findRefreshTimer = new DispatcherTimer(DispatcherPriority.Background)
-        {
-            Interval = TimeSpan.FromMilliseconds(180)
-        };
+        _findRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
         _findRefreshTimer.Tick += (_, _) =>
         {
             _findRefreshTimer.Stop();

@@ -23,16 +23,7 @@ public sealed class FileDocument : IDisposable
     private bool _isIndexComplete;
     private FileLoadProgress _latestProgress;
 
-    private FileDocument(
-        string path,
-        long fileSizeBytes,
-        Encoding encoding,
-        SafeFileHandle handle,
-        List<long> lineStarts,
-        long scanPosition,
-        bool isIndexComplete,
-        TimeSpan initialOpenDuration,
-        FileLoadProgress latestProgress)
+    private FileDocument(string path, long fileSizeBytes, Encoding encoding, SafeFileHandle handle, List<long> lineStarts, long scanPosition, bool isIndexComplete, TimeSpan initialOpenDuration, FileLoadProgress latestProgress)
     {
         Path = path;
         FileSizeBytes = fileSizeBytes;
@@ -58,30 +49,51 @@ public sealed class FileDocument : IDisposable
 
     public long LineCount
     {
-        get { lock (_stateGate) { return _lineStarts.Count; } }
+        get
+        {
+            lock (_stateGate)
+            {
+                return _lineStarts.Count;
+            }
+        }
     }
 
     public long IndexedLineCount => LineCount;
 
     public bool IsIndexComplete
     {
-        get { lock (_stateGate) { return _isIndexComplete; } }
+        get
+        {
+            lock (_stateGate)
+            {
+                return _isIndexComplete;
+            }
+        }
     }
 
     public long BytesIndexed
     {
-        get { lock (_stateGate) { return _scanPosition; } }
+        get
+        {
+            lock (_stateGate)
+            {
+                return _scanPosition;
+            }
+        }
     }
 
     public FileLoadProgress LatestProgress
     {
-        get { lock (_stateGate) { return _latestProgress; } }
+        get
+        {
+            lock (_stateGate)
+            {
+                return _latestProgress;
+            }
+        }
     }
 
-    public static Task<FileDocument> OpenAsync(
-        string path,
-        IProgress<FileLoadProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+    public static Task<FileDocument> OpenAsync(string path, IProgress<FileLoadProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         return Task.Run(() => OpenInternal(path, progress, cancellationToken), cancellationToken);
     }
@@ -99,9 +111,7 @@ public sealed class FileDocument : IDisposable
 
         lock (_stateGate)
         {
-            if (_cache is { } cache &&
-                firstLine >= cache.StartLine &&
-                firstLine + count <= cache.StartLine + cache.Lines.Length)
+            if (_cache is { } cache && firstLine >= cache.StartLine && firstLine + count <= cache.StartLine + cache.Lines.Length)
             {
                 return cache.Slice(firstLine, count);
             }
@@ -172,54 +182,27 @@ public sealed class FileDocument : IDisposable
         _scanCancellation.Dispose();
     }
 
-    private static FileDocument OpenInternal(
-        string path,
-        IProgress<FileLoadProgress>? progress,
-        CancellationToken cancellationToken)
+    private static FileDocument OpenInternal(string path, IProgress<FileLoadProgress>? progress, CancellationToken cancellationToken)
     {
         if (!File.Exists(path))
         {
             throw new FileNotFoundException("The file does not exist.", path);
         }
 
-        using var stream = new FileStream(
-            path,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite | FileShare.Delete,
-            ScanBufferSize,
-            FileOptions.SequentialScan);
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, ScanBufferSize, FileOptions.SequentialScan);
 
         var fileLength = stream.Length;
         var encoding = DetectEncoding(stream, out var startOffset);
         var openStopwatch = Stopwatch.StartNew();
         var lineStarts = new List<long>(EstimateLineCapacity(fileLength)) { startOffset };
-        var initialPosition = ScanChunk(
-            path,
-            stream,
-            fileLength,
-            startOffset,
-            InitialScanBytes,
-            InitialTargetLines,
-            lineStarts,
-            progress,
-            cancellationToken);
+        var initialPosition = ScanChunk(path, stream, fileLength, startOffset, InitialScanBytes, InitialTargetLines, lineStarts, progress, cancellationToken);
         openStopwatch.Stop();
 
         var isComplete = initialPosition >= fileLength;
         var latestProgress = new FileLoadProgress(path, initialPosition, fileLength, lineStarts.Count);
         var handle = File.OpenHandle(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 
-        var document = new FileDocument(
-            path,
-            fileLength,
-            encoding,
-            handle,
-            lineStarts,
-            initialPosition,
-            isComplete,
-            openStopwatch.Elapsed,
-            latestProgress);
+        var document = new FileDocument(path, fileLength, encoding, handle, lineStarts, initialPosition, isComplete, openStopwatch.Elapsed, latestProgress);
 
         progress?.Report(latestProgress);
 
@@ -241,13 +224,7 @@ public sealed class FileDocument : IDisposable
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            using var stream = new FileStream(
-                Path,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.ReadWrite | FileShare.Delete,
-                ScanBufferSize,
-                FileOptions.SequentialScan);
+            using var stream = new FileStream(Path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, ScanBufferSize, FileOptions.SequentialScan);
 
             stream.Position = startPosition;
             var buffer = ArrayPool<byte>.Shared.Rent(ScanBufferSize);
@@ -293,9 +270,7 @@ public sealed class FileDocument : IDisposable
                 _latestProgress = new FileLoadProgress(Path, FileSizeBytes, FileSizeBytes, _lineStarts.Count);
             }
         }
-        catch (OperationCanceledException)
-        {
-        }
+        catch (OperationCanceledException) { }
         finally
         {
             stopwatch.Stop();
@@ -319,16 +294,7 @@ public sealed class FileDocument : IDisposable
         ProgressChanged?.Invoke(this, progressSnapshot);
     }
 
-    private static long ScanChunk(
-        string path,
-        FileStream stream,
-        long fileLength,
-        long startOffset,
-        int maxBytes,
-        int targetLines,
-        List<long> lineStarts,
-        IProgress<FileLoadProgress>? progress,
-        CancellationToken cancellationToken)
+    private static long ScanChunk(string path, FileStream stream, long fileLength, long startOffset, int maxBytes, int targetLines, List<long> lineStarts, IProgress<FileLoadProgress>? progress, CancellationToken cancellationToken)
     {
         stream.Position = startOffset;
         var buffer = ArrayPool<byte>.Shared.Rent(ScanBufferSize);

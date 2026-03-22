@@ -1,11 +1,11 @@
-using ICSharpCode.AvalonEdit.Document;
-using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using ICSharpCode.AvalonEdit.Document;
+using Microsoft.Win32;
 
 namespace FastNote.App;
 
@@ -90,20 +90,9 @@ public partial class MainWindow
 
     private async Task StreamFileIntoEditorAsync(DocumentTab tab, string path, int loadVersion, CancellationToken cancellationToken)
     {
-        using var stream = new FileStream(
-            path,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.ReadWrite | FileShare.Delete,
-            bufferSize: 1024 * 1024,
-            options: FileOptions.Asynchronous | FileOptions.SequentialScan);
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize: 1024 * 1024, options: FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-        using var reader = new StreamReader(
-            stream,
-            Encoding.UTF8,
-            detectEncodingFromByteOrderMarks: true,
-            bufferSize: 1024 * 1024,
-            leaveOpen: true);
+        using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024 * 1024, leaveOpen: true);
 
         var fileLength = stream.Length;
         var charBuffer = new char[ReadBufferChars];
@@ -159,9 +148,7 @@ public partial class MainWindow
             tab.LoadedCharacterCount += read;
             tab.EncodingLabel = ToEncodingLabel(reader.CurrentEncoding);
 
-            var shouldFlush =
-                pendingUiChunk.Length >= UiAppendChunkChars ||
-                flushStopwatch.Elapsed >= UiFlushInterval;
+            var shouldFlush = pendingUiChunk.Length >= UiAppendChunkChars || flushStopwatch.Elapsed >= UiFlushInterval;
 
             if (!shouldFlush)
             {
@@ -205,12 +192,7 @@ public partial class MainWindow
         TrimInactiveTabMemory();
     }
 
-    private async Task FlushEditorChunkAsync(
-        DocumentTab tab,
-        int loadVersion,
-        StringBuilder pendingUiChunk,
-        long fileLength,
-        CancellationToken cancellationToken)
+    private async Task FlushEditorChunkAsync(DocumentTab tab, int loadVersion, StringBuilder pendingUiChunk, long fileLength, CancellationToken cancellationToken)
     {
         if (pendingUiChunk.Length == 0)
         {
@@ -321,9 +303,12 @@ public partial class MainWindow
 
     private static string DetectTrackedLineEnding(bool sawCrLf, bool sawCr, bool sawLf)
     {
-        if (sawCrLf) return "Windows (CRLF)";
-        if (sawCr) return "Macintosh (CR)";
-        if (sawLf) return "Unix (LF)";
+        if (sawCrLf)
+            return "Windows (CRLF)";
+        if (sawCr)
+            return "Macintosh (CR)";
+        if (sawLf)
+            return "Unix (LF)";
         return "Windows (CRLF)";
     }
 
@@ -362,15 +347,12 @@ public partial class MainWindow
             return true;
         }
 
-        var result = MessageBox.Show(
-            this,
-            $"Do you want to save changes to {tab.DisplayTitle}?",
-            "Notepad",
-            MessageBoxButton.YesNoCancel,
-            MessageBoxImage.Question);
+        var result = MessageBox.Show(this, $"Do you want to save changes to {tab.DisplayTitle}?", "Notepad", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
 
-        if (result == MessageBoxResult.Cancel) return false;
-        if (result == MessageBoxResult.Yes) return await SaveDocumentAsync(tab, saveAs: false);
+        if (result == MessageBoxResult.Cancel)
+            return false;
+        if (result == MessageBoxResult.Yes)
+            return await SaveDocumentAsync(tab, saveAs: false);
         return true;
     }
 
@@ -390,7 +372,7 @@ public partial class MainWindow
             {
                 Filter = "Text files (*.txt)|*.txt|All files (*.*)|*.*",
                 DefaultExt = "txt",
-                FileName = string.IsNullOrWhiteSpace(path) ? "Untitled.txt" : Path.GetFileName(path)
+                FileName = string.IsNullOrWhiteSpace(path) ? "Untitled.txt" : Path.GetFileName(path),
             };
 
             if (dialog.ShowDialog(this) != true)
@@ -448,7 +430,8 @@ public partial class MainWindow
     private void CaptureActiveTabState()
     {
         var tab = GetActiveTab();
-        if (tab is null) return;
+        if (tab is null)
+            return;
 
         if (!tab.IsViewportBacked)
         {
@@ -480,21 +463,24 @@ public partial class MainWindow
         var selLen = Math.Min(tab.SelectionLength, safeLen - selStart);
         EditorTextBox.Select(0, 0);
         EditorTextBox.CaretOffset = Math.Min(caretIndex, Math.Min(safeLen, 1_024));
-        Dispatcher.BeginInvoke(() =>
-        {
-            if (GetActiveTab()?.Id != tab.Id || !ReferenceEquals(EditorTextBox.Document, document))
+        Dispatcher.BeginInvoke(
+            () =>
             {
-                return;
-            }
+                if (GetActiveTab()?.Id != tab.Id || !ReferenceEquals(EditorTextBox.Document, document))
+                {
+                    return;
+                }
 
-            var delayedSafeLen = EditorTextBox.Document?.TextLength ?? 0;
-            var delayedCaretIndex = Math.Min(tab.CaretIndex, delayedSafeLen);
-            var delayedSelStart = Math.Min(tab.SelectionStart, delayedSafeLen);
-            var delayedSelLen = Math.Min(tab.SelectionLength, delayedSafeLen - delayedSelStart);
-            EditorTextBox.CaretOffset = delayedCaretIndex;
-            EditorTextBox.Select(delayedSelStart, delayedSelLen);
-            EditorTextBox.Focus();
-        }, System.Windows.Threading.DispatcherPriority.Background);
+                var delayedSafeLen = EditorTextBox.Document?.TextLength ?? 0;
+                var delayedCaretIndex = Math.Min(tab.CaretIndex, delayedSafeLen);
+                var delayedSelStart = Math.Min(tab.SelectionStart, delayedSafeLen);
+                var delayedSelLen = Math.Min(tab.SelectionLength, delayedSafeLen - delayedSelStart);
+                EditorTextBox.CaretOffset = delayedCaretIndex;
+                EditorTextBox.Select(delayedSelStart, delayedSelLen);
+                EditorTextBox.Focus();
+            },
+            System.Windows.Threading.DispatcherPriority.Background
+        );
 
         ConfigureWordWrap();
         UpdateTitle();
@@ -553,7 +539,8 @@ public partial class MainWindow
     private void RefreshActiveTabUi()
     {
         var tab = GetActiveTab();
-        if (tab is null) return;
+        if (tab is null)
+            return;
 
         UpdateEditorSurface(tab);
         UpdateLoadingUi();
@@ -576,7 +563,7 @@ public partial class MainWindow
             Text = string.Empty,
             EditorDocument = new TextDocument(),
             IsEditorBacked = true,
-            LastActivatedUtc = DateTime.UtcNow
+            LastActivatedUtc = DateTime.UtcNow,
         };
     }
 
@@ -584,13 +571,7 @@ public partial class MainWindow
     {
         return Task.Run(() =>
         {
-            using var stream = new FileStream(
-                path,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.Read,
-                bufferSize: 1024 * 1024,
-                FileOptions.SequentialScan);
+            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read, bufferSize: 1024 * 1024, FileOptions.SequentialScan);
             using var writer = new StreamWriter(stream, encoding, 1024 * 1024);
             snapshot.WriteTextTo(writer);
         });
@@ -605,7 +586,8 @@ public partial class MainWindow
 
     private void SwitchToTab(int index)
     {
-        if (index < 0 || index >= _tabs.Count) return;
+        if (index < 0 || index >= _tabs.Count)
+            return;
 
         if (index == _activeTabIndex)
         {
@@ -631,7 +613,8 @@ public partial class MainWindow
 
     private void SwitchTabByOffset(int offset)
     {
-        if (_tabs.Count <= 1 || offset == 0) return;
+        if (_tabs.Count <= 1 || offset == 0)
+            return;
 
         var currentIndex = _activeTabIndex < 0 ? 0 : _activeTabIndex;
         var nextIndex = ((currentIndex + offset) % _tabs.Count + _tabs.Count) % _tabs.Count;
@@ -640,15 +623,11 @@ public partial class MainWindow
 
     private void TrimInactiveTabMemory()
     {
-        if (_tabs.Count <= TabRetentionLimit) return;
+        if (_tabs.Count <= TabRetentionLimit)
+            return;
 
         var activeId = GetActiveTab()?.Id;
-        var retained = _tabs
-            .OrderByDescending(t => t.Id == activeId)
-            .ThenByDescending(t => t.LastActivatedUtc)
-            .Take(TabRetentionLimit)
-            .Select(t => t.Id)
-            .ToHashSet();
+        var retained = _tabs.OrderByDescending(t => t.Id == activeId).ThenByDescending(t => t.LastActivatedUtc).Take(TabRetentionLimit).Select(t => t.Id).ToHashSet();
 
         foreach (var t in _tabs)
         {
@@ -695,7 +674,7 @@ public partial class MainWindow
                 CornerRadius = new CornerRadius(6, 6, 0, 0),
                 Padding = new Thickness(12, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = new Thickness(0, 0, 2, 0)
+                Margin = new Thickness(0, 0, 2, 0),
             };
 
             if (!isActive)
@@ -721,8 +700,8 @@ public partial class MainWindow
                     Text = tab.DisplayTitle,
                     Foreground = (Brush)FindResource(isActive ? "TabForegroundBrush" : "TabInactiveForegroundBrush"),
                     FontSize = 12,
-                    TextTrimming = TextTrimming.CharacterEllipsis
-                }
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                },
             };
             titleButton.Click += TabButton_OnClick;
 
@@ -736,8 +715,8 @@ public partial class MainWindow
                     FontFamily = new FontFamily("Segoe Fluent Icons"),
                     FontSize = 10,
                     Foreground = (Brush)FindResource("EditorMutedBrush"),
-                    VerticalAlignment = VerticalAlignment.Center
-                }
+                    VerticalAlignment = VerticalAlignment.Center,
+                },
             };
             closeButton.Click += TabCloseButton_OnClick;
             Grid.SetColumn(closeButton, 1);
@@ -752,17 +731,17 @@ public partial class MainWindow
     private async Task CloseTabAsync(Guid tabId)
     {
         var index = _tabs.FindIndex(t => t.Id == tabId);
-        if (index < 0) return;
+        if (index < 0)
+            return;
 
         var tab = _tabs[index];
-        if (!await ConfirmDiscardChangesAsync(tab)) return;
+        if (!await ConfirmDiscardChangesAsync(tab))
+            return;
 
         CancelLoad(tab);
         ReleaseVirtualDocument(tab);
 
-        var targetIndex = index == _activeTabIndex
-            ? Math.Max(0, Math.Min(index, _tabs.Count - 2))
-            : _activeTabIndex;
+        var targetIndex = index == _activeTabIndex ? Math.Max(0, Math.Min(index, _tabs.Count - 2)) : _activeTabIndex;
         _tabs.RemoveAt(index);
 
         if (_tabs.Count == 0)
@@ -771,7 +750,8 @@ public partial class MainWindow
             return;
         }
 
-        if (index < _activeTabIndex) targetIndex--;
+        if (index < _activeTabIndex)
+            targetIndex--;
 
         _activeTabIndex = -1;
         SwitchToTab(Math.Max(0, Math.Min(targetIndex, _tabs.Count - 1)));
@@ -779,11 +759,7 @@ public partial class MainWindow
 
     private async Task OpenWithDialogAsync()
     {
-        var dialog = new OpenFileDialog
-        {
-            Filter = "Text files (*.txt;*.log;*.md;*.json;*.xml;*.csv;*.ini;*.cfg;*.cs;*.py;*.js;*.ts;*.html;*.css)|*.txt;*.log;*.md;*.json;*.xml;*.csv;*.ini;*.cfg;*.cs;*.py;*.js;*.ts;*.html;*.css|All files (*.*)|*.*",
-            CheckFileExists = true
-        };
+        var dialog = new OpenFileDialog { Filter = "Text files (*.txt;*.log;*.md;*.json;*.xml;*.csv;*.ini;*.cfg;*.cs;*.py;*.js;*.ts;*.html;*.css)|*.txt;*.log;*.md;*.json;*.xml;*.csv;*.ini;*.cfg;*.cs;*.py;*.js;*.ts;*.html;*.css|All files (*.*)|*.*", CheckFileExists = true };
 
         if (dialog.ShowDialog(this) == true)
         {
@@ -794,8 +770,10 @@ public partial class MainWindow
     private async Task NewDocumentAsync()
     {
         var tab = GetActiveTab();
-        if (!await ConfirmDiscardChangesAsync(tab)) return;
-        if (tab is null) return;
+        if (!await ConfirmDiscardChangesAsync(tab))
+            return;
+        if (tab is null)
+            return;
 
         CancelLoad(tab);
         ReleaseVirtualDocument(tab);

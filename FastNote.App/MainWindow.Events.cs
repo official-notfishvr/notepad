@@ -1,11 +1,11 @@
 using System.ComponentModel;
-using ICSharpCode.AvalonEdit.Document;
 using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using ICSharpCode.AvalonEdit.Document;
 
 namespace FastNote.App;
 
@@ -287,16 +287,16 @@ public partial class MainWindow
             }
         }
 
-        if (sawCr) return "Macintosh (CR)";
-        if (sawLf) return "Unix (LF)";
+        if (sawCr)
+            return "Macintosh (CR)";
+        if (sawLf)
+            return "Unix (LF)";
         return "Windows (CRLF)";
     }
 
     private static string ToEncodingLabel(Encoding encoding)
     {
-        return encoding.EncodingName.Contains("UTF-8", StringComparison.OrdinalIgnoreCase)
-            ? "UTF-8"
-            : encoding.EncodingName;
+        return encoding.EncodingName.Contains("UTF-8", StringComparison.OrdinalIgnoreCase) ? "UTF-8" : encoding.EncodingName;
     }
 
     private static bool IsInteractiveTitleBarSource(DependencyObject? source)

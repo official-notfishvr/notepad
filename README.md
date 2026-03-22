@@ -1,5 +1,7 @@
 # FastNote
 
+90% AI 
+
 FastNote is a Visual Studio WPF project that mimics the Windows 11 Notepad shell while keeping large-file opening fast through streaming and background indexing.
 
 ## What it does

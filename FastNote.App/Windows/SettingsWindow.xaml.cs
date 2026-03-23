@@ -11,6 +11,7 @@ public partial class SettingsWindow : Window
     public string SelectedAppearanceMode { get; private set; } = "Classic";
     public bool ShowStatusBar { get; private set; }
     public bool DefaultWordWrap { get; private set; }
+    public bool RestorePreviousSession { get; private set; }
 
     public SettingsWindow(AppSettings settings, bool isTxtAssociated)
     {
@@ -20,6 +21,7 @@ public partial class SettingsWindow : Window
         ThemeComboBox.SelectedIndex = string.Equals(settings.Theme, "Light", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         StatusBarCheckBox.IsChecked = settings.StatusBarVisible;
         WordWrapCheckBox.IsChecked = settings.DefaultWordWrap;
+        RestoreSessionCheckBox.IsChecked = settings.RestorePreviousSession;
         RefreshAssociationState(isTxtAssociated);
     }
 
@@ -29,6 +31,7 @@ public partial class SettingsWindow : Window
         SelectedTheme = ((ThemeComboBox.SelectedItem as ComboBoxItem)?.Content as string) ?? "Dark";
         ShowStatusBar = StatusBarCheckBox.IsChecked == true;
         DefaultWordWrap = WordWrapCheckBox.IsChecked == true;
+        RestorePreviousSession = RestoreSessionCheckBox.IsChecked == true;
         DialogResult = true;
     }
 

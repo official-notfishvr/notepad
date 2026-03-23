@@ -31,21 +31,27 @@
                         <Grid x:Name="TitleBar" Height="40" Background="Transparent" PreviewMouseLeftButtonDown="TitleBar_OnMouseLeftButtonDown">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <Border x:Name="AppIconHost" Grid.Column="0" Width="28" Height="28" Margin="10,0,8,0" VerticalAlignment="Center" Background="{DynamicResource AppIconBackgroundBrush}" CornerRadius="4">
                                 <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="15" Foreground="{DynamicResource MenuForegroundBrush}" Text="" />
                             </Border>
-                            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" CanContentScroll="False" VerticalAlignment="Bottom" Background="Transparent">
+                            <Button x:Name="TabScrollLeftButton" Grid.Column="1" Width="28" Height="28" Margin="0,0,6,0" VerticalAlignment="Bottom" Background="Transparent" BorderBrush="Transparent" Padding="0" Click="TabScrollLeftButton_OnClick" ToolTip="Scroll tabs left">
+                                <Border x:Name="TabScrollLeftSurface" Width="28" Height="28" CornerRadius="8" Background="{DynamicResource TabInactiveBrush}">
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="" />
+                                </Border>
+                            </Button>
+                            <ScrollViewer x:Name="TabStripScrollViewer" Grid.Column="2" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" CanContentScroll="False" VerticalAlignment="Bottom" Background="Transparent" PanningMode="HorizontalOnly">
                                 <StackPanel x:Name="TabStripPanel" Orientation="Horizontal" />
                             </ScrollViewer>
-                            <Button x:Name="NewTabButton" Grid.Column="2" Style="{StaticResource ChromeButtonStyle}" Width="32" Height="30" Margin="6,0,0,0" Click="NewTabButton_OnClick" ToolTip="New tab (Ctrl+N)">
-                                <TextBlock FontFamily="Segoe Fluent Icons" FontSize="11" Foreground="{DynamicResource MenuForegroundBrush}" Text="" />
+                            <Button x:Name="TabScrollRightButton" Grid.Column="3" Width="28" Height="28" Margin="6,0,6,0" VerticalAlignment="Bottom" Background="Transparent" BorderBrush="Transparent" Padding="0" Click="TabScrollRightButton_OnClick" ToolTip="Scroll tabs right">
+                                <Border x:Name="TabScrollRightSurface" Width="28" Height="28" CornerRadius="8" Background="{DynamicResource TabInactiveBrush}">
+                                    <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="" />
+                                </Border>
                             </Button>
-                            <Border Grid.Column="3" Background="Transparent" />
                             <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right">
                                 <Button Style="{StaticResource ChromeButtonStyle}" Click="MinimizeButton_OnClick" ToolTip="Minimize">
                                     <TextBlock FontFamily="Segoe Fluent Icons" FontSize="10" Foreground="{DynamicResource MenuForegroundBrush}" Text="" />
@@ -287,6 +293,9 @@
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Shift+S" />
                         </Grid>
                     </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="SaveWithEncodingMenuItem_OnClick">
+                        <TextBlock Text="Save with encoding" />
+                    </Button>
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="SaveAllMenuItem_OnClick">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -349,6 +358,16 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Undo" />
                             <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Z" />
+                        </Grid>
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Click="RedoMenuItem_OnClick">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Redo" />
+                            <TextBlock Grid.Column="1" Opacity="0.5" Text="Ctrl+Y" />
                         </Grid>
                     </Button>
                     <Button Style="{StaticResource PopupRowButtonStyle}" Click="CutMenuItem_OnClick">

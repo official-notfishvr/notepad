@@ -47,7 +47,8 @@
                             <ComboBoxItem Content="Light" />
                         </ComboBox>
                         <CheckBox x:Name="StatusBarCheckBox" Margin="0,0,0,10" Style="{StaticResource DialogCheckBoxStyle}" Content="Show status bar" />
-                        <CheckBox x:Name="WordWrapCheckBox" Style="{StaticResource DialogCheckBoxStyle}" Content="Use word wrap for new documents" />
+                        <CheckBox x:Name="WordWrapCheckBox" Margin="0,0,0,10" Style="{StaticResource DialogCheckBoxStyle}" Content="Use word wrap for new documents" />
+                        <CheckBox x:Name="RestoreSessionCheckBox" Style="{StaticResource DialogCheckBoxStyle}" Content="Restore previous tabs and unsaved changes on startup" />
                     </StackPanel>
                 </Border>
 

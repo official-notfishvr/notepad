@@ -77,6 +77,7 @@ public partial class MainWindow
         _appSettings.Theme = dialog.SelectedTheme;
         _appSettings.StatusBarVisible = dialog.ShowStatusBar;
         _appSettings.DefaultWordWrap = dialog.DefaultWordWrap;
+        _appSettings.RestorePreviousSession = dialog.RestorePreviousSession;
 
         ApplyAppearanceMode(GetAppearanceModeFromSettings(_appSettings.AppearanceMode));
         _statusBarVisible = _appSettings.StatusBarVisible;
@@ -375,6 +376,12 @@ public partial class MainWindow
         await SaveDocumentAsync(GetActiveTab(), saveAs: true);
     }
 
+    private async void SaveWithEncodingMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        FileMenuPopup.IsOpen = false;
+        await SaveDocumentAsync(GetActiveTab(), saveAs: false, chooseOptions: true);
+    }
+
     private async void SaveAllMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         FileMenuPopup.IsOpen = false;
@@ -389,15 +396,7 @@ public partial class MainWindow
 
     private async void ExitMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
-        foreach (var tab in _tabs.ToArray())
-        {
-            if (!await ConfirmDiscardChangesAsync(tab))
-            {
-                return;
-            }
-        }
-
-        Close();
+        await TryCloseWindowAsync();
     }
 
     private void PageSetupMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -643,6 +642,12 @@ public partial class MainWindow
 
     private async void CloseWindowButton_OnClick(object sender, RoutedEventArgs e)
     {
+        _skipCloseConfirmation = true;
+        Close();
+    }
+
+    private async Task TryCloseWindowAsync()
+    {
         foreach (var tab in _tabs.ToArray())
         {
             if (!await ConfirmDiscardChangesAsync(tab))
@@ -651,6 +656,7 @@ public partial class MainWindow
             }
         }
 
+        _skipCloseConfirmation = true;
         Close();
     }
 

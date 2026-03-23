@@ -8,6 +8,7 @@ public sealed class AppSettings
     public string Theme { get; set; } = "Dark";
     public string AppearanceMode { get; set; } = "Classic";
     public bool StatusBarVisible { get; set; } = true;
+    public bool RestorePreviousSession { get; set; } = true;
     public bool DefaultWordWrap { get; set; }
     public string EditorFontFamily { get; set; } = "Segoe UI Variable Text";
     public string EditorFontStyle { get; set; } = "Normal";

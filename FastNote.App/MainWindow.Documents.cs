@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using FastNote.App.Settings;
 using ICSharpCode.AvalonEdit.Document;
 using Microsoft.Win32;
 
@@ -14,6 +16,20 @@ public partial class MainWindow
     private const int ReadBufferChars = 256 * 1024;
     private const int UiAppendChunkChars = 6 * 1024 * 1024;
     private static readonly TimeSpan UiFlushInterval = TimeSpan.FromMilliseconds(650);
+    private static readonly IReadOnlyList<SaveOptionItem> EncodingOptions =
+    [
+        new() { Key = "utf-8", Label = "UTF-8" },
+        new() { Key = "utf-8-bom", Label = "UTF-8 with BOM" },
+        new() { Key = "utf-16-le", Label = "Unicode" },
+        new() { Key = "utf-16-be", Label = "Unicode big endian" },
+        new() { Key = "ansi", Label = "ANSI" },
+    ];
+    private static readonly IReadOnlyList<SaveOptionItem> LineEndingOptions =
+    [
+        new() { Key = "crlf", Label = "Windows (CRLF)" },
+        new() { Key = "lf", Label = "Unix (LF)" },
+        new() { Key = "cr", Label = "Macintosh (CR)" },
+    ];
 
     public async Task OpenFileAsync(string path)
     {
@@ -29,6 +45,130 @@ public partial class MainWindow
         }
 
         await StartLoadingIntoTabAsync(tab, path);
+    }
+
+    private bool TryRestorePreviousSession()
+    {
+        if (!_appSettings.RestorePreviousSession)
+        {
+            return false;
+        }
+
+        var session = SessionStore.Load();
+        if (session is null || session.Tabs.Count == 0)
+        {
+            return false;
+        }
+
+        _tabs.Clear();
+
+        foreach (var sessionTab in session.Tabs)
+        {
+            _tabs.Add(CreateDocumentTabFromSession(sessionTab));
+        }
+
+        _activeTabIndex = -1;
+        var activeIndex = Math.Clamp(session.ActiveTabIndex, 0, _tabs.Count - 1);
+        SwitchToTab(activeIndex);
+        return _tabs.Count > 0;
+    }
+
+    private DocumentTab CreateDocumentTabFromSession(FastNote.App.Settings.SessionTabState state)
+    {
+        var tab = CreateNewDocumentTab();
+        tab.Title = state.Title;
+        tab.Path = state.Path;
+        tab.WordWrapEnabled = state.WordWrapEnabled;
+        tab.CaretIndex = state.CaretIndex;
+        tab.SelectionStart = state.SelectionStart;
+        tab.SelectionLength = state.SelectionLength;
+        tab.EncodingKey = state.EncodingKey;
+        tab.EncodingLabel = state.EncodingLabel;
+        tab.LineEndingKey = state.LineEndingKey;
+        tab.LineEndingLabel = state.LineEndingLabel;
+        tab.IsMarkdownPreviewEnabled = state.IsMarkdownPreviewEnabled;
+        tab.IsDirty = state.IsDirty;
+
+        if (!string.IsNullOrWhiteSpace(state.DraftFileName))
+        {
+            var draftPath = SessionStore.GetDraftPath(state.DraftFileName);
+            if (File.Exists(draftPath))
+            {
+                var draftText = File.ReadAllText(draftPath, ResolveEncoding(tab.EncodingKey));
+                tab.EditorDocument = new TextDocument(draftText);
+                tab.LoadedCharacterCount = draftText.Length;
+                tab.LoadedLineCount = CountVisibleLines(draftText);
+                tab.IsEditorBacked = true;
+                tab.StreamedToEditorCharacterCount = draftText.Length;
+                return tab;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(tab.Path) && File.Exists(tab.Path))
+        {
+            tab.Title = Path.GetFileName(tab.Path);
+            tab.EditorDocument = null;
+            tab.IsEditorBacked = false;
+            tab.Text = string.Empty;
+            return tab;
+        }
+
+        tab.EditorDocument = new TextDocument();
+        tab.IsEditorBacked = true;
+        tab.IsDirty = false;
+        return tab;
+    }
+
+    private void SaveSessionSnapshot()
+    {
+        CaptureActiveTabState();
+
+        if (!_appSettings.RestorePreviousSession)
+        {
+            SessionStore.Save(new SessionState());
+            return;
+        }
+
+        var session = new SessionState
+        {
+            ActiveTabIndex = Math.Max(0, _activeTabIndex),
+        };
+        var retainedDrafts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var tab in _tabs)
+        {
+            var sessionTab = new SessionTabState
+            {
+                Title = tab.Title,
+                Path = tab.Path,
+                IsDirty = tab.IsDirty,
+                WordWrapEnabled = tab.WordWrapEnabled,
+                CaretIndex = tab.CaretIndex,
+                SelectionStart = tab.SelectionStart,
+                SelectionLength = tab.SelectionLength,
+                EncodingKey = tab.EncodingKey,
+                EncodingLabel = tab.EncodingLabel,
+                LineEndingKey = tab.LineEndingKey,
+                LineEndingLabel = tab.LineEndingLabel,
+                IsMarkdownPreviewEnabled = tab.IsMarkdownPreviewEnabled,
+            };
+
+            if (tab.IsDirty || string.IsNullOrWhiteSpace(tab.Path))
+            {
+                var draftFileName = $"{tab.Id:N}.draft";
+                var draftPath = SessionStore.GetDraftPath(draftFileName);
+                Directory.CreateDirectory(SessionStore.SessionDirectoryPath);
+                var content = tab.EditorDocument?.Text ?? tab.Text;
+                File.WriteAllText(draftPath, content, ResolveEncoding(tab.EncodingKey));
+                sessionTab.DraftFileName = draftFileName;
+                retainedDrafts.Add(draftFileName);
+            }
+
+            session.Tabs.Add(sessionTab);
+        }
+
+        SessionStore.Save(session);
+        SessionStore.ClearMissingDrafts(retainedDrafts);
     }
 
     private async Task StartLoadingIntoTabAsync(DocumentTab tab, string path)
@@ -146,7 +286,8 @@ public partial class MainWindow
             pendingUiChunk.Append(charBuffer, 0, read);
             TrackLineEndings(charBuffer, read, ref sawCrLf, ref sawCr, ref sawLf, ref previousEndedWithCr);
             tab.LoadedCharacterCount += read;
-            tab.EncodingLabel = ToEncodingLabel(reader.CurrentEncoding);
+            tab.EncodingKey = ToEncodingKey(reader.CurrentEncoding);
+            tab.EncodingLabel = ToEncodingLabel(tab.EncodingKey);
 
             var shouldFlush = pendingUiChunk.Length >= UiAppendChunkChars || flushStopwatch.Elapsed >= UiFlushInterval;
 
@@ -169,7 +310,8 @@ public partial class MainWindow
 
         tab.IsLoading = false;
         tab.LoadingLabel = string.Empty;
-        tab.LineEndingLabel = DetectTrackedLineEnding(sawCrLf, sawCr, sawLf);
+        tab.LineEndingKey = DetectTrackedLineEndingKey(sawCrLf, sawCr, sawLf);
+        tab.LineEndingLabel = ToLineEndingLabel(tab.LineEndingKey);
         AddRecentFile(path);
 
         if (GetActiveTab()?.Id == tab.Id)
@@ -192,6 +334,7 @@ public partial class MainWindow
 
         RenderTabs();
         TrimInactiveTabMemory();
+        SaveSessionSnapshot();
     }
 
     private async Task FlushEditorChunkAsync(DocumentTab tab, int loadVersion, StringBuilder pendingUiChunk, long fileLength, CancellationToken cancellationToken)
@@ -333,7 +476,9 @@ public partial class MainWindow
         tab.IsEditorBacked = true;
         tab.IsViewportBacked = false;
         tab.StreamedToEditorCharacterCount = 0;
+        tab.EncodingKey = "utf-8";
         tab.EncodingLabel = "UTF-8";
+        tab.LineEndingKey = "crlf";
         tab.LineEndingLabel = "Windows (CRLF)";
         tab.IsTextCacheReady = true;
         tab.IsHydratingText = false;
@@ -352,16 +497,24 @@ public partial class MainWindow
             return true;
         }
 
-        var result = MessageBox.Show(this, $"Do you want to save changes to {tab.DisplayTitle}?", "Notepad", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+        var fileName = string.IsNullOrWhiteSpace(tab.Path) ? tab.Title : Path.GetFileName(tab.Path);
+        var dialog = new UnsavedChangesDialog(fileName) { Owner = this };
+        _ = dialog.ShowDialog();
 
-        if (result == MessageBoxResult.Cancel)
+        if (dialog.Choice == UnsavedChangesChoice.Cancel)
+        {
             return false;
-        if (result == MessageBoxResult.Yes)
+        }
+
+        if (dialog.Choice == UnsavedChangesChoice.Save)
+        {
             return await SaveDocumentAsync(tab, saveAs: false);
+        }
+
         return true;
     }
 
-    private async Task<bool> SaveDocumentAsync(DocumentTab? tab, bool saveAs)
+    private async Task<bool> SaveDocumentAsync(DocumentTab? tab, bool saveAs, bool chooseOptions = false)
     {
         if (tab is null)
         {
@@ -388,11 +541,26 @@ public partial class MainWindow
             path = dialog.FileName;
         }
 
-        var enc = tab.LineEndingLabel.Contains("UTF-8 BOM") ? new UTF8Encoding(true) : new UTF8Encoding(false);
+        if (chooseOptions)
+        {
+            var dialog = new SaveOptionsWindow(EncodingOptions, LineEndingOptions, tab.EncodingKey, tab.LineEndingKey) { Owner = this };
+            if (dialog.ShowDialog() != true)
+            {
+                return false;
+            }
+
+            tab.EncodingKey = dialog.SelectedEncodingKey;
+            tab.EncodingLabel = ToEncodingLabel(tab.EncodingKey);
+            tab.LineEndingKey = dialog.SelectedLineEndingKey;
+            tab.LineEndingLabel = ToLineEndingLabel(tab.LineEndingKey);
+        }
+
         var snapshot = tab.EditorDocument?.CreateSnapshot();
-        var fallbackText = snapshot is null ? tab.Text : null;
-        tab.LoadedCharacterCount = snapshot?.TextLength ?? fallbackText?.Length ?? 0;
-        tab.LoadedLineCount = tab.EditorDocument?.LineCount ?? CountVisibleLines(fallbackText ?? string.Empty);
+        var sourceText = snapshot?.Text ?? tab.Text;
+        var normalizedText = NormalizeLineEndings(sourceText, tab.LineEndingKey);
+        var encoding = ResolveEncoding(tab.EncodingKey);
+        tab.LoadedCharacterCount = normalizedText.Length;
+        tab.LoadedLineCount = CountVisibleLines(normalizedText);
 
         tab.IsLoading = true;
         tab.LoadingLabel = "Saving…";
@@ -404,17 +572,7 @@ public partial class MainWindow
 
         try
         {
-            if (snapshot is not null)
-            {
-                tab.LineEndingLabel = await Task.Run(() => DetectLineEnding(snapshot));
-                await WriteTextSourceToFileAsync(path!, snapshot, enc);
-            }
-            else
-            {
-                var content = fallbackText ?? string.Empty;
-                tab.LineEndingLabel = await Task.Run(() => DetectLineEnding(content));
-                await File.WriteAllTextAsync(path!, content, enc);
-            }
+            await File.WriteAllTextAsync(path!, normalizedText, encoding);
         }
         finally
         {
@@ -427,11 +585,13 @@ public partial class MainWindow
         tab.IsMarkdownPreviewEnabled = tab.IsMarkdownPreviewEnabled && SupportsMarkdownPreview(tab);
         tab.MarkdownPreviewCacheKey = null;
         tab.IsDirty = false;
-        tab.EncodingLabel = "UTF-8";
+        tab.EncodingLabel = ToEncodingLabel(tab.EncodingKey);
+        tab.LineEndingLabel = ToLineEndingLabel(tab.LineEndingKey);
         AddRecentFile(path!);
         RenderTabs();
         UpdateTitle();
         RefreshActiveTabUi();
+        SaveSessionSnapshot();
         return true;
     }
 
@@ -561,6 +721,72 @@ public partial class MainWindow
         UpdateTitle();
     }
 
+    private static Encoding ResolveEncoding(string encodingKey)
+    {
+        return encodingKey switch
+        {
+            "utf-8-bom" => new UTF8Encoding(true),
+            "utf-16-le" => Encoding.Unicode,
+            "utf-16-be" => Encoding.BigEndianUnicode,
+            "ansi" => Encoding.GetEncoding(CultureInfo.CurrentCulture.TextInfo.ANSICodePage),
+            _ => new UTF8Encoding(false),
+        };
+    }
+
+    private static string ToEncodingKey(Encoding encoding)
+    {
+        if (encoding is UTF8Encoding utf8Encoding)
+        {
+            return utf8Encoding.GetPreamble().Length > 0 ? "utf-8-bom" : "utf-8";
+        }
+
+        if (encoding.CodePage == Encoding.Unicode.CodePage)
+        {
+            return "utf-16-le";
+        }
+
+        if (encoding.CodePage == Encoding.BigEndianUnicode.CodePage)
+        {
+            return "utf-16-be";
+        }
+
+        return "ansi";
+    }
+
+    private static string ToEncodingLabel(string encodingKey)
+    {
+        return EncodingOptions.FirstOrDefault(option => string.Equals(option.Key, encodingKey, StringComparison.OrdinalIgnoreCase))?.Label ?? "UTF-8";
+    }
+
+    private static string DetectTrackedLineEndingKey(bool sawCrLf, bool sawCr, bool sawLf)
+    {
+        if (sawCrLf)
+            return "crlf";
+        if (sawCr)
+            return "cr";
+        if (sawLf)
+            return "lf";
+        return "crlf";
+    }
+
+    private static string ToLineEndingLabel(string lineEndingKey)
+    {
+        return LineEndingOptions.FirstOrDefault(option => string.Equals(option.Key, lineEndingKey, StringComparison.OrdinalIgnoreCase))?.Label ?? "Windows (CRLF)";
+    }
+
+    private static string NormalizeLineEndings(string value, string lineEndingKey)
+    {
+        var normalized = value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        var target = lineEndingKey switch
+        {
+            "lf" => "\n",
+            "cr" => "\r",
+            _ => "\r\n",
+        };
+
+        return normalized.Replace("\n", target, StringComparison.Ordinal);
+    }
+
     private DocumentTab? GetActiveTab()
     {
         return _activeTabIndex >= 0 && _activeTabIndex < _tabs.Count ? _tabs[_activeTabIndex] : null;
@@ -573,22 +799,15 @@ public partial class MainWindow
             Id = Guid.NewGuid(),
             Title = "Untitled",
             EncodingLabel = "UTF-8",
+            EncodingKey = "utf-8",
             Text = string.Empty,
             EditorDocument = new TextDocument(),
             IsEditorBacked = true,
             LastActivatedUtc = DateTime.UtcNow,
             WordWrapEnabled = _appSettings.DefaultWordWrap,
+            LineEndingKey = "crlf",
+            LineEndingLabel = "Windows (CRLF)",
         };
-    }
-
-    private static Task WriteTextSourceToFileAsync(string path, ITextSource snapshot, Encoding encoding)
-    {
-        return Task.Run(() =>
-        {
-            using var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Read, bufferSize: 1024 * 1024, FileOptions.SequentialScan);
-            using var writer = new StreamWriter(stream, encoding, 1024 * 1024);
-            snapshot.WriteTextTo(writer);
-        });
     }
 
     private void CreateNewTabAndActivate()
@@ -596,6 +815,7 @@ public partial class MainWindow
         CaptureActiveTabState();
         _tabs.Add(CreateNewDocumentTab());
         SwitchToTab(_tabs.Count - 1);
+        SaveSessionSnapshot();
     }
 
     private void SwitchToTab(int index)
@@ -674,22 +894,36 @@ public partial class MainWindow
     private void RenderTabs()
     {
         TabStripPanel.Children.Clear();
+        var isWindows11Appearance = _appearanceMode == AppAppearanceMode.Windows11;
+        var maxTabWidth = isWindows11Appearance ? 240d : 200d;
+        var minTabWidth = isWindows11Appearance ? 112d : 96d;
+        var tabGap = isWindows11Appearance ? 4d : 2d;
+        var newTabButtonWidth = 34d;
+        var availableWidth = TabStripScrollViewer.ActualWidth;
+        if (availableWidth <= 0)
+        {
+            availableWidth = Width > 0 ? Width - 250 : 700;
+        }
+
+        var computedWidth = _tabs.Count == 0
+            ? maxTabWidth
+            : Math.Floor((availableWidth - newTabButtonWidth - Math.Max(0, _tabs.Count) * tabGap) / _tabs.Count);
+        var targetTabWidth = Math.Clamp(computedWidth, minTabWidth, maxTabWidth);
+
         for (var i = 0; i < _tabs.Count; i++)
         {
             var tab = _tabs[i];
             var isActive = i == _activeTabIndex;
-            var isWindows11 = _appearanceMode == AppAppearanceMode.Windows11;
 
             var border = new Border
             {
-                Height = isWindows11 ? 30 : 34,
-                MinWidth = 120,
-                MaxWidth = isWindows11 ? 240 : 200,
+                Height = isWindows11Appearance ? 30 : 34,
+                Width = targetTabWidth,
                 Background = (Brush)FindResource(isActive ? "TabActiveBrush" : "TabInactiveBrush"),
-                CornerRadius = isWindows11 ? new CornerRadius(8, 8, 0, 0) : new CornerRadius(6, 6, 0, 0),
-                Padding = isWindows11 ? new Thickness(14, 0, 8, 0) : new Thickness(12, 0, 6, 0),
+                CornerRadius = isWindows11Appearance ? new CornerRadius(8, 8, 0, 0) : new CornerRadius(6, 6, 0, 0),
+                Padding = isWindows11Appearance ? new Thickness(14, 0, 8, 0) : new Thickness(12, 0, 6, 0),
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = isWindows11 ? new Thickness(0, 0, 4, 0) : new Thickness(0, 0, 2, 0),
+                Margin = isWindows11Appearance ? new Thickness(0, 0, 4, 0) : new Thickness(0, 0, 2, 0),
             };
 
             if (!isActive)
@@ -741,6 +975,81 @@ public partial class MainWindow
             border.Child = grid;
             TabStripPanel.Children.Add(border);
         }
+
+        var newTabButton = new Button
+        {
+            Width = isWindows11Appearance ? 30 : 32,
+            Height = isWindows11Appearance ? 30 : 32,
+            Margin = isWindows11Appearance ? new Thickness(2, 0, 0, 0) : new Thickness(4, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Background = Brushes.Transparent,
+            BorderBrush = Brushes.Transparent,
+            Padding = new Thickness(0),
+            ToolTip = "New tab (Ctrl+T)",
+            Cursor = System.Windows.Input.Cursors.Hand,
+        };
+
+        var newTabSurface = new Border
+        {
+            Width = isWindows11Appearance ? 28 : 30,
+            Height = isWindows11Appearance ? 28 : 30,
+            CornerRadius = isWindows11Appearance ? new CornerRadius(8) : new CornerRadius(10),
+            Background = (Brush)FindResource("TabInactiveBrush"),
+            BorderBrush = (Brush)FindResource("BorderBrush"),
+            BorderThickness = isWindows11Appearance ? new Thickness(0) : new Thickness(1),
+            Child = new TextBlock
+            {
+                Text = "\uE710",
+                FontFamily = new FontFamily("Segoe Fluent Icons"),
+                FontSize = 11,
+                Foreground = (Brush)FindResource("MenuForegroundBrush"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+            },
+        };
+
+        newTabButton.Content = newTabSurface;
+        newTabButton.MouseEnter += (_, _) => newTabSurface.Background = (Brush)FindResource("TabHoverBrush");
+        newTabButton.MouseLeave += (_, _) => newTabSurface.Background = (Brush)FindResource("TabInactiveBrush");
+        newTabButton.Click += NewTabButton_OnClick;
+        TabStripPanel.Children.Add(newTabButton);
+
+        Dispatcher.BeginInvoke(UpdateTabStripNavigationState, System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    private void UpdateTabStripNavigationState()
+    {
+        var canScroll = TabStripScrollViewer.ExtentWidth - TabStripScrollViewer.ViewportWidth > 1;
+        var canScrollLeft = canScroll && TabStripScrollViewer.HorizontalOffset > 1;
+        var canScrollRight = canScroll && TabStripScrollViewer.HorizontalOffset < TabStripScrollViewer.ScrollableWidth - 1;
+
+        ApplyTabScrollButtonState(TabScrollLeftButton, TabScrollLeftSurface, canScrollLeft);
+        ApplyTabScrollButtonState(TabScrollRightButton, TabScrollRightSurface, canScrollRight);
+    }
+
+    private void ApplyTabScrollButtonState(Button button, Border surface, bool isEnabled)
+    {
+        button.IsEnabled = isEnabled;
+        button.Visibility = isEnabled ? Visibility.Visible : Visibility.Collapsed;
+        button.Opacity = 1;
+        surface.Background = (Brush)FindResource("TabInactiveBrush");
+    }
+
+    private void TabScrollLeftButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ScrollTabsBy(-Math.Max(160, TabStripScrollViewer.ViewportWidth * 0.6));
+    }
+
+    private void TabScrollRightButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ScrollTabsBy(Math.Max(160, TabStripScrollViewer.ViewportWidth * 0.6));
+    }
+
+    private void ScrollTabsBy(double delta)
+    {
+        var nextOffset = Math.Clamp(TabStripScrollViewer.HorizontalOffset + delta, 0, TabStripScrollViewer.ScrollableWidth);
+        TabStripScrollViewer.ScrollToHorizontalOffset(nextOffset);
+        UpdateTabStripNavigationState();
     }
 
     private async Task CloseTabAsync(Guid tabId)
@@ -770,6 +1079,7 @@ public partial class MainWindow
 
         _activeTabIndex = -1;
         SwitchToTab(Math.Max(0, Math.Min(targetIndex, _tabs.Count - 1)));
+        SaveSessionSnapshot();
     }
 
     private async Task OpenWithDialogAsync()
@@ -797,5 +1107,6 @@ public partial class MainWindow
         _tabs[index] = replacement;
         _activeTabIndex = index;
         PresentTab(replacement, forceTextRefresh: true);
+        SaveSessionSnapshot();
     }
 }

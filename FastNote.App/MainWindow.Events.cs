@@ -20,10 +20,38 @@ public partial class MainWindow
             return;
         }
 
+        if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
+        {
+            if (e.Key == Key.S)
+            {
+                e.Handled = true;
+                await SaveDocumentAsync(GetActiveTab(), saveAs: true);
+                return;
+            }
+
+            if (e.Key == Key.N)
+            {
+                e.Handled = true;
+                NewWindowMenuItem_OnClick(this, new RoutedEventArgs());
+                return;
+            }
+
+            if (e.Key == Key.W)
+            {
+                e.Handled = true;
+                CloseWindowMenuItem_OnClick(this, new RoutedEventArgs());
+                return;
+            }
+        }
+
         if (Keyboard.Modifiers == ModifierKeys.Control)
         {
             switch (e.Key)
             {
+                case Key.T:
+                    e.Handled = true;
+                    CreateNewTabAndActivate();
+                    return;
                 case Key.N:
                     e.Handled = true;
                     CreateNewTabAndActivate();
@@ -32,13 +60,13 @@ public partial class MainWindow
                     e.Handled = true;
                     await OpenWithDialogAsync();
                     return;
-                case Key.S when Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift):
-                    e.Handled = true;
-                    await SaveDocumentAsync(GetActiveTab(), saveAs: true);
-                    return;
                 case Key.S:
                     e.Handled = true;
                     await SaveDocumentAsync(GetActiveTab(), saveAs: false);
+                    return;
+                case Key.Y:
+                    e.Handled = true;
+                    EditorTextBox.Redo();
                     return;
                 case Key.F:
                     e.Handled = true;
@@ -94,23 +122,6 @@ public partial class MainWindow
             }
         }
 
-        if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift))
-        {
-            if (e.Key == Key.N)
-            {
-                e.Handled = true;
-                NewWindowMenuItem_OnClick(this, new RoutedEventArgs());
-                return;
-            }
-
-            if (e.Key == Key.W)
-            {
-                e.Handled = true;
-                CloseWindowMenuItem_OnClick(this, new RoutedEventArgs());
-                return;
-            }
-        }
-
         if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Alt) && e.Key == Key.S)
         {
             e.Handled = true;
@@ -153,13 +164,21 @@ public partial class MainWindow
     protected override async void OnClosing(CancelEventArgs e)
     {
         CaptureActiveTabState();
-        foreach (var tab in _tabs.ToArray())
+
+        if (!_skipCloseConfirmation)
         {
-            if (!await ConfirmDiscardChangesAsync(tab))
+            foreach (var tab in _tabs.ToArray())
             {
-                e.Cancel = true;
-                return;
+                if (!await ConfirmDiscardChangesAsync(tab))
+                {
+                    e.Cancel = true;
+                    return;
+                }
             }
+        }
+        else
+        {
+            _skipCloseConfirmation = false;
         }
 
         foreach (var tab in _tabs)
@@ -168,6 +187,8 @@ public partial class MainWindow
             ReleaseVirtualDocument(tab);
         }
 
+        SaveSessionSnapshot();
+        _sessionSaveTimer.Stop();
         _statusRefreshTimer.Stop();
         base.OnClosing(e);
     }
@@ -253,76 +274,6 @@ public partial class MainWindow
     {
         return string.IsNullOrEmpty(value) ? 1 : CountLineBreaks(value) + 1;
     }
-
-    private static string DetectLineEnding(string value)
-    {
-        if (value.Contains("\r\n", StringComparison.Ordinal))
-        {
-            return "Windows (CRLF)";
-        }
-
-        if (value.Contains('\r'))
-        {
-            return "Macintosh (CR)";
-        }
-
-        if (value.Contains('\n'))
-        {
-            return "Unix (LF)";
-        }
-
-        return "Windows (CRLF)";
-    }
-
-    private static string DetectLineEnding(ITextSource textSource)
-    {
-        using var reader = textSource.CreateReader();
-        var buffer = new char[8_192];
-        var previousWasCr = false;
-        var sawCr = false;
-        var sawLf = false;
-
-        while (true)
-        {
-            var read = reader.Read(buffer, 0, buffer.Length);
-            if (read <= 0)
-            {
-                break;
-            }
-
-            for (var i = 0; i < read; i++)
-            {
-                var ch = buffer[i];
-                if (ch == '\n')
-                {
-                    if (previousWasCr)
-                    {
-                        return "Windows (CRLF)";
-                    }
-
-                    sawLf = true;
-                }
-                else if (ch == '\r')
-                {
-                    sawCr = true;
-                }
-
-                previousWasCr = ch == '\r';
-            }
-        }
-
-        if (sawCr)
-            return "Macintosh (CR)";
-        if (sawLf)
-            return "Unix (LF)";
-        return "Windows (CRLF)";
-    }
-
-    private static string ToEncodingLabel(Encoding encoding)
-    {
-        return encoding.EncodingName.Contains("UTF-8", StringComparison.OrdinalIgnoreCase) ? "UTF-8" : encoding.EncodingName;
-    }
-
     private static bool IsInteractiveTitleBarSource(DependencyObject? source)
     {
         while (source is not null)

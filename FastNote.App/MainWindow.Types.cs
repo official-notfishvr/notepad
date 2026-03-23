@@ -5,6 +5,12 @@ namespace FastNote.App;
 
 public partial class MainWindow
 {
+    public sealed class SaveOptionItem
+    {
+        public required string Key { get; init; }
+        public required string Label { get; init; }
+    }
+
     private enum AppThemeMode
     {
         Light,
@@ -15,6 +21,13 @@ public partial class MainWindow
     {
         Classic,
         Windows11,
+    }
+
+    public enum UnsavedChangesChoice
+    {
+        Save,
+        DontSave,
+        Cancel,
     }
 
     private sealed class DocumentTab
@@ -29,12 +42,14 @@ public partial class MainWindow
         public int CaretIndex { get; set; }
         public int SelectionStart { get; set; }
         public int SelectionLength { get; set; }
+        public string EncodingKey { get; set; } = "utf-8";
         public string EncodingLabel { get; set; } = "UTF-8";
         public bool IsLoading { get; set; }
         public string LoadingLabel { get; set; } = string.Empty;
         public int LoadVersion { get; set; }
         public long LoadedCharacterCount { get; set; }
         public long LoadedLineCount { get; set; } = 1;
+        public string LineEndingKey { get; set; } = "crlf";
         public string LineEndingLabel { get; set; } = "Windows (CRLF)";
         public DateTime LastActivatedUtc { get; set; }
         public int StreamedToEditorCharacterCount { get; set; }

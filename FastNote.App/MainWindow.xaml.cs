@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using FastNote.App.Settings;
@@ -18,6 +19,7 @@ public partial class MainWindow : Window
     private readonly Dictionary<Guid, CancellationTokenSource> _loadTokens = [];
     private readonly DispatcherTimer _statusRefreshTimer;
     private readonly DispatcherTimer _findRefreshTimer;
+    private readonly DispatcherTimer _sessionSaveTimer;
     private readonly SearchHighlightColorizer _searchHighlightColorizer;
     private readonly List<string> _recentFiles;
     private CancellationTokenSource? _matchCountTokenSource;
@@ -28,6 +30,7 @@ public partial class MainWindow : Window
     private bool _statusBarVisible = true;
     private bool _replaceVisible;
     private bool _findOptionsVisible = true;
+    private bool _skipCloseConfirmation;
     private int _activeTabIndex = -1;
 
     private FontFamily _editorFontFamily = new("Segoe UI Variable Text");
@@ -45,6 +48,10 @@ public partial class MainWindow : Window
         InitializeComponent();
         ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
         UpdateWindowButtons();
+        TabStripScrollViewer.SizeChanged += (_, _) => RenderTabs();
+        TabStripScrollViewer.ScrollChanged += (_, _) => UpdateTabStripNavigationState();
+        WireTabChromeHover(TabScrollLeftButton, TabScrollLeftSurface);
+        WireTabChromeHover(TabScrollRightButton, TabScrollRightSurface);
         EditorTextBox.TextChanged += EditorTextBox_OnTextChanged;
         EditorTextBox.TextArea.SelectionChanged += EditorTextBox_OnSelectionChanged;
         EditorTextBox.TextArea.Caret.PositionChanged += (_, _) => EditorTextBox_OnSelectionChanged(EditorTextBox, EventArgs.Empty);
@@ -77,12 +84,19 @@ public partial class MainWindow : Window
             ApplyHighlightAllState();
             BeginMatchCountUpdate();
         };
+        _sessionSaveTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(5) };
+        _sessionSaveTimer.Tick += (_, _) => SaveSessionSnapshot();
 
-        CreateNewTabAndActivate();
         ApplySavedSettings();
+        if (!TryRestorePreviousSession())
+        {
+            CreateNewTabAndActivate();
+        }
+
         RebuildRecentFilesMenu();
         EditorTextBox.Focus();
         Loaded += MainWindow_OnLoaded;
+        _sessionSaveTimer.Start();
     }
 
     private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
@@ -102,5 +116,17 @@ public partial class MainWindow : Window
         ShowSettingsWindow();
         _appSettings.SetupCompleted = true;
         SaveSettings();
+    }
+
+    private void WireTabChromeHover(System.Windows.Controls.Button button, Border surface)
+    {
+        button.MouseEnter += (_, _) =>
+        {
+            if (button.IsEnabled)
+            {
+                surface.Background = (Brush)FindResource("TabHoverBrush");
+            }
+        };
+        button.MouseLeave += (_, _) => surface.Background = (Brush)FindResource("TabInactiveBrush");
     }
 }

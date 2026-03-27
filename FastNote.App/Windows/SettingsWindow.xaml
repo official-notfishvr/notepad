@@ -3,10 +3,10 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Settings"
-    Width="560"
-    Height="520"
-    MinWidth="560"
-    MinHeight="520"
+    Width="760"
+    Height="620"
+    MinWidth="760"
+    MinHeight="620"
     WindowStartupLocation="CenterOwner"
     ResizeMode="NoResize"
     ShowInTaskbar="False"
@@ -14,61 +14,88 @@
     Foreground="{DynamicResource MenuForegroundBrush}"
     FontFamily="{DynamicResource EditorFont}"
     Icon="pack://application:,,,/Assets/txtfile.ico">
-    <Grid Margin="22">
+    <Grid Margin="26">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <StackPanel Margin="0,0,0,18" MouseLeftButtonDown="HeaderRegion_OnMouseLeftButtonDown">
-            <TextBlock Style="{StaticResource DialogTitleTextStyle}" Text="FastNote Settings" />
-            <TextBlock Margin="0,8,0,0" Style="{StaticResource DialogBodyTextStyle}" Text="Theme, editor defaults, and file opening are managed here." />
-        </StackPanel>
+        <Border Margin="0,0,0,22" Padding="22" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="16" MouseLeftButtonDown="HeaderRegion_OnMouseLeftButtonDown">
+            <StackPanel>
+                <TextBlock Style="{StaticResource DialogTitleTextStyle}" Text="Settings" />
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource DialogBodyTextStyle}" Text="Make FastNote feel the way you want every time it opens." />
+            </StackPanel>
+        </Border>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <Grid Margin="0,0,4,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Margin="0,0,0,14" Style="{StaticResource DialogSectionBorderStyle}">
+                <Border Grid.Row="0" Grid.Column="0" Margin="0,0,10,14" Style="{StaticResource DialogSectionBorderStyle}">
                     <StackPanel>
-                        <TextBlock Margin="0,0,0,12" Style="{StaticResource DialogSectionTitleTextStyle}" Text="Appearance" />
-                        <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogLabelTextStyle}" Text="Layout" />
-                        <ComboBox x:Name="AppearanceComboBox" Margin="0,0,0,14">
-                            <ComboBoxItem Content="Classic" />
-                            <ComboBoxItem Content="Windows 11" />
-                        </ComboBox>
+                        <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogSectionTitleTextStyle}" Text="Appearance" />
+                        <TextBlock Margin="0,0,0,14" Style="{StaticResource DialogBodyTextStyle}" Text="Theme and layout details for the editor shell." />
                         <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogLabelTextStyle}" Text="Theme" />
-                        <ComboBox x:Name="ThemeComboBox" Margin="0,0,0,14">
+                        <ComboBox x:Name="ThemeComboBox" Margin="0,0,0,16">
                             <ComboBoxItem Content="Dark" />
                             <ComboBoxItem Content="Light" />
                         </ComboBox>
-                        <CheckBox x:Name="StatusBarCheckBox" Margin="0,0,0,10" Style="{StaticResource DialogCheckBoxStyle}" Content="Show status bar" />
-                        <CheckBox x:Name="WordWrapCheckBox" Margin="0,0,0,10" Style="{StaticResource DialogCheckBoxStyle}" Content="Use word wrap for new documents" />
-                        <CheckBox x:Name="RestoreSessionCheckBox" Style="{StaticResource DialogCheckBoxStyle}" Content="Restore previous tabs and unsaved changes on startup" />
+                        <CheckBox x:Name="StatusBarCheckBox" Margin="0,0,0,12" Style="{StaticResource DialogCheckBoxStyle}" Content="Show status bar" />
+                        <CheckBox x:Name="WordWrapCheckBox" Margin="0,0,0,12" Style="{StaticResource DialogCheckBoxStyle}" Content="Use word wrap for new documents" />
+                        <CheckBox x:Name="RestoreSessionCheckBox" Style="{StaticResource DialogCheckBoxStyle}" Content="Open previous tabs and unsaved changes on startup" />
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="1" Style="{StaticResource DialogSectionBorderStyle}">
+                <Border Grid.Row="0" Grid.Column="1" Margin="10,0,0,14" Style="{StaticResource DialogSectionBorderStyle}">
+                    <StackPanel>
+                        <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogSectionTitleTextStyle}" Text="Default Font" />
+                        <TextBlock Margin="0,0,0,14" Style="{StaticResource DialogBodyTextStyle}" Text="Choose the editor font used for new and reopened documents." />
+                        <Border Margin="0,0,0,14" Padding="14,12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12">
+                            <StackPanel>
+                                <TextBlock Foreground="{DynamicResource EditorMutedBrush}" FontSize="11" Text="Current selection" />
+                                <TextBlock x:Name="FontSummaryText" Margin="0,6,0,0" FontSize="14" FontWeight="SemiBold" Text="Segoe UI Variable Text, 14 pt" />
+                            </StackPanel>
+                        </Border>
+                        <Button
+                            Width="132"
+                            Height="34"
+                            HorizontalAlignment="Left"
+                            Style="{StaticResource DialogButtonStyle}"
+                            Content="Choose font"
+                            Click="ChooseFontButton_OnClick" />
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Style="{StaticResource DialogSectionBorderStyle}">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="170" />
                         </Grid.ColumnDefinitions>
-                        <StackPanel Margin="0,0,16,0">
-                            <TextBlock Margin="0,0,0,8" Style="{StaticResource DialogSectionTitleTextStyle}" Text="File Opening" />
-                            <TextBlock x:Name="AssociationDescriptionText" Margin="0,0,0,6" Foreground="{DynamicResource MenuForegroundBrush}" TextWrapping="Wrap" />
-                            <TextBlock x:Name="AssociationPathText" FontSize="11" Style="{StaticResource DialogBodyTextStyle}" />
-                            <TextBlock x:Name="AssociationExtensionsText" Margin="0,10,0,0" FontSize="11" Style="{StaticResource DialogBodyTextStyle}" />
+                        <StackPanel Margin="0,0,18,0">
+                            <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogSectionTitleTextStyle}" Text="File Opening" />
+                            <TextBlock x:Name="AssociationDescriptionText" Margin="0,0,0,8" Style="{StaticResource DialogBodyTextStyle}" />
+                            <Border Padding="14,12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12">
+                                <StackPanel>
+                                    <TextBlock Foreground="{DynamicResource EditorMutedBrush}" FontSize="11" Text="Current registration" />
+                                    <TextBlock x:Name="AssociationPathText" Margin="0,6,0,0" FontSize="12" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="AssociationExtensionsText" Margin="0,10,0,0" FontSize="12" Style="{StaticResource DialogBodyTextStyle}" />
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                         <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button
                                 x:Name="InstallAssociationButton"
-                                Width="136"
-                                Height="34"
+                                Width="146"
+                                Height="36"
                                 Style="{StaticResource DialogButtonStyle}"
                                 Content="Set as default"
                                 Click="InstallAssociationButton_OnClick" />

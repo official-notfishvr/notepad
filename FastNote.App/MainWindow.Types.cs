@@ -11,16 +11,16 @@ public partial class MainWindow
         public required string Label { get; init; }
     }
 
+    private enum DocumentKind
+    {
+        PlainText,
+        Markdown,
+    }
+
     private enum AppThemeMode
     {
         Light,
         Dark,
-    }
-
-    private enum AppAppearanceMode
-    {
-        Classic,
-        Windows11,
     }
 
     public enum UnsavedChangesChoice
@@ -33,7 +33,7 @@ public partial class MainWindow
     private sealed class DocumentTab
     {
         public Guid Id { get; set; }
-        public string Title { get; set; } = "Untitled";
+        public string Title { get; set; } = "Untitled.txt";
         public string? Path { get; set; }
         public string Text { get; set; } = string.Empty;
         public TextDocument? EditorDocument { get; set; }
@@ -61,6 +61,12 @@ public partial class MainWindow
         public bool AutoActivateEditorWhenReady { get; set; }
         public bool IsMarkdownPreviewEnabled { get; set; }
         public string? MarkdownPreviewCacheKey { get; set; }
+        public DocumentKind Kind { get; set; } = DocumentKind.PlainText;
+
+        public bool IsMarkdownDocument => Kind == DocumentKind.Markdown;
+        public bool CanShowFormattingToolbar => IsMarkdownDocument;
+        public bool CanUseGoTo => !IsMarkdownPreviewEnabled;
+        public bool CanShowEncodingAndLineEndings => true;
 
         public string DisplayTitle
         {

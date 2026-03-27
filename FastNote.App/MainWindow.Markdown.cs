@@ -11,6 +11,15 @@ public partial class MainWindow
 {
     private readonly MarkdownPipeline _markdownPipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
 
+    private static DocumentKind DetectDocumentKind(string? path, string? title)
+    {
+        var candidate = !string.IsNullOrWhiteSpace(path) ? path : title;
+        var extension = Path.GetExtension(candidate);
+        return string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".markdown", StringComparison.OrdinalIgnoreCase)
+            ? DocumentKind.Markdown
+            : DocumentKind.PlainText;
+    }
+
     private static bool SupportsMarkdownPreview(DocumentTab? tab)
     {
         if (tab is null)
@@ -18,13 +27,7 @@ public partial class MainWindow
             return false;
         }
 
-        if (!string.IsNullOrWhiteSpace(tab.Path))
-        {
-            var extension = Path.GetExtension(tab.Path);
-            return string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".markdown", StringComparison.OrdinalIgnoreCase);
-        }
-
-        return tab.Title.EndsWith(".md", StringComparison.OrdinalIgnoreCase) || tab.Title.EndsWith(".markdown", StringComparison.OrdinalIgnoreCase);
+        return tab.IsMarkdownDocument;
     }
 
     private bool IsMarkdownPreviewActive(DocumentTab? tab)
@@ -38,12 +41,13 @@ public partial class MainWindow
         var isPreviewActive = IsMarkdownPreviewActive(tab);
 
         MarkdownPreviewMenuItem.Visibility = supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
-        MarkdownPreviewToolbarButton.Visibility = supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
-        MarkdownToolbar.Visibility = _appearanceMode == AppAppearanceMode.Windows11 && supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
         MarkdownPreviewGlyph.Opacity = isPreviewActive ? 0.85 : 0;
-        MarkdownPreviewToolbarButton.Content = isPreviewActive ? "Edit markdown" : "Markdown preview";
-        Windows11MarkdownPreviewToolbarButton.Visibility = supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
-        Windows11MarkdownPreviewText.Text = isPreviewActive ? "Edit" : "Preview";
+        MarkdownToolbar.Visibility = tab?.CanShowFormattingToolbar == true ? Visibility.Visible : Visibility.Collapsed;
+        MarkdownPreviewToggleText.Text = isPreviewActive ? "Edit" : "Preview";
+        GoToMenuItem.IsEnabled = tab?.CanUseGoTo != false;
+        GoToShortcutText.Opacity = GoToMenuItem.IsEnabled ? 0.5 : 0.25;
+        FontMenuItem.Visibility = Visibility.Visible;
+        ClearFormattingMenuItem.Visibility = supportsMarkdown ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void RefreshMarkdownPreview(DocumentTab? tab)

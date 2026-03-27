@@ -5,7 +5,7 @@ namespace FastNote.App.Settings;
 
 public sealed class SessionTabState
 {
-    public string Title { get; set; } = "Untitled";
+    public string Title { get; set; } = "Untitled.txt";
     public string? Path { get; set; }
     public string? DraftFileName { get; set; }
     public bool IsDirty { get; set; }

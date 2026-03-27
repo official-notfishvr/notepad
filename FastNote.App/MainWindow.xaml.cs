@@ -25,13 +25,15 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _matchCountTokenSource;
 
     private AppThemeMode _themeMode = AppThemeMode.Dark;
-    private AppAppearanceMode _appearanceMode = AppAppearanceMode.Classic;
     private bool _isInternalUpdate;
     private bool _statusBarVisible = true;
     private bool _replaceVisible;
     private bool _findOptionsVisible = true;
     private bool _skipCloseConfirmation;
     private int _activeTabIndex = -1;
+    private Point _tabDragStartPoint;
+    private Guid? _pendingTabDragId;
+    private Guid? _draggingTabId;
 
     private FontFamily _editorFontFamily = new("Segoe UI Variable Text");
     private FontStyle _editorFontStyle = FontStyles.Normal;
@@ -46,6 +48,7 @@ public partial class MainWindow : Window
             .Take(10)
             .ToList();
         InitializeComponent();
+        ApplyHybridShellLayout();
         ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
         UpdateWindowButtons();
         TabStripScrollViewer.SizeChanged += (_, _) => RenderTabs();

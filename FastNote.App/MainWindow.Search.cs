@@ -28,7 +28,8 @@ public partial class MainWindow
         int index;
         if (UseRegexCheckBox.IsChecked == true)
         {
-            index = FindWithRegex(text, query, start, forward: true);
+            var match = FindRegexMatch(text, query, start, forward: true);
+            index = match?.Index ?? -1;
         }
         else
         {
@@ -38,7 +39,8 @@ public partial class MainWindow
 
         if (index >= 0)
         {
-            ScrollToMatchAndSelect(index, query.Length);
+            var length = UseRegexCheckBox.IsChecked == true ? FindRegexMatch(text, query, start, forward: true)?.Length ?? query.Length : query.Length;
+            ScrollToMatchAndSelect(index, length);
         }
         else
         {
@@ -62,7 +64,8 @@ public partial class MainWindow
         int index;
         if (UseRegexCheckBox.IsChecked == true)
         {
-            index = FindWithRegex(text, query, start, forward: false);
+            var match = FindRegexMatch(text, query, start, forward: false);
+            index = match?.Index ?? -1;
         }
         else
         {
@@ -72,7 +75,8 @@ public partial class MainWindow
 
         if (index >= 0)
         {
-            ScrollToMatchAndSelect(index, query.Length);
+            var length = UseRegexCheckBox.IsChecked == true ? FindRegexMatch(text, query, start, forward: false)?.Length ?? query.Length : query.Length;
+            ScrollToMatchAndSelect(index, length);
         }
         else
         {
@@ -112,36 +116,60 @@ public partial class MainWindow
 
     private static int FindWithOptions(string text, string query, int start, bool forward, StringComparison comparison, bool wholeWord)
     {
-        int index;
         if (forward)
         {
-            index = text.IndexOf(query, start, comparison);
-            if (index < 0)
+            var searchStart = Math.Max(0, start);
+            while (true)
             {
-                index = text.IndexOf(query, comparison);
-            }
-        }
-        else
-        {
-            index = start > 0 ? text.LastIndexOf(query, start, comparison) : -1;
-            if (index < 0)
-            {
-                index = text.LastIndexOf(query, comparison);
+                var index = text.IndexOf(query, searchStart, comparison);
+                if (index < 0 && searchStart > 0)
+                {
+                    searchStart = 0;
+                    continue;
+                }
+
+                if (index < 0)
+                {
+                    return -1;
+                }
+
+                if (!wholeWord || IsWholeWordMatch(text, index, query.Length))
+                {
+                    return index;
+                }
+
+                searchStart = index + Math.Max(1, query.Length);
             }
         }
 
-        if (index >= 0 && wholeWord)
+        var reverseStart = Math.Clamp(start, 0, Math.Max(0, text.Length - 1));
+        while (true)
         {
-            if ((index > 0 && char.IsLetterOrDigit(text[index - 1])) || (index + query.Length < text.Length && char.IsLetterOrDigit(text[index + query.Length])))
+            var index = reverseStart > 0 ? text.LastIndexOf(query, reverseStart, comparison) : text.LastIndexOf(query, comparison);
+            if (index < 0 && reverseStart < text.Length - 1)
+            {
+                reverseStart = text.Length - 1;
+                continue;
+            }
+            if (index < 0)
+            {
+                return -1;
+            }
+
+            if (!wholeWord || IsWholeWordMatch(text, index, query.Length))
+            {
+                return index;
+            }
+
+            reverseStart = index - 1;
+            if (reverseStart < 0)
             {
                 return -1;
             }
         }
-
-        return index;
     }
 
-    private static int FindWithRegex(string text, string pattern, int start, bool forward)
+    private static Match? FindRegexMatch(string text, string pattern, int start, bool forward)
     {
         try
         {
@@ -154,18 +182,100 @@ public partial class MainWindow
                     match = regex.Match(text);
                 }
 
-                return match.Success ? match.Index : -1;
+                return match.Success ? match : null;
             }
-            else
-            {
-                var matches = regex.Matches(text[..start]);
-                return matches.Count > 0 ? matches[^1].Index : -1;
-            }
+
+            var matches = regex.Matches(text[..start]);
+            return matches.Count > 0 ? matches[^1] : null;
         }
         catch
         {
-            return -1;
+            return null;
         }
+    }
+
+    private static bool IsWholeWordMatch(string text, int index, int length)
+    {
+        var leftBoundary = index == 0 || !char.IsLetterOrDigit(text[index - 1]) && text[index - 1] != '_';
+        var rightIndex = index + length;
+        var rightBoundary = rightIndex >= text.Length || !char.IsLetterOrDigit(text[rightIndex]) && text[rightIndex] != '_';
+        return leftBoundary && rightBoundary;
+    }
+
+    private Match? GetCurrentRegexMatch(string text, string pattern, int selectionStart, int selectionLength)
+    {
+        try
+        {
+            var regex = new Regex(pattern, RegexOptions.Multiline | (MatchCaseCheckBox.IsChecked == true ? RegexOptions.None : RegexOptions.IgnoreCase));
+            return regex.Matches(text).Cast<Match>().FirstOrDefault(match => match.Index == selectionStart && match.Length == selectionLength);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private bool IsCurrentSelectionSearchMatch(string sourceText, string query)
+    {
+        if (EditorTextBox.SelectionLength <= 0)
+        {
+            return false;
+        }
+
+        if (UseRegexCheckBox.IsChecked == true)
+        {
+            return GetCurrentRegexMatch(sourceText, query, EditorTextBox.SelectionStart, EditorTextBox.SelectionLength) is not null;
+        }
+
+        var comparison = MatchCaseCheckBox.IsChecked == true ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+        if (!string.Equals(EditorTextBox.SelectedText, query, comparison))
+        {
+            return false;
+        }
+
+        return WholeWordCheckBox.IsChecked != true || IsWholeWordMatch(sourceText, EditorTextBox.SelectionStart, EditorTextBox.SelectionLength);
+    }
+
+    private bool TryReplaceCurrentMatch()
+    {
+        var query = FindTextBox.Text;
+        if (string.IsNullOrEmpty(query))
+        {
+            return false;
+        }
+
+        var sourceText = EditorTextBox.Text;
+        if (!IsCurrentSelectionSearchMatch(sourceText, query))
+        {
+            return false;
+        }
+
+        if (UseRegexCheckBox.IsChecked == true)
+        {
+            var match = GetCurrentRegexMatch(sourceText, query, EditorTextBox.SelectionStart, EditorTextBox.SelectionLength);
+            if (match is null)
+            {
+                return false;
+            }
+
+            var replacement = match.Result(ReplaceTextBox.Text);
+            EditorTextBox.SelectedText = replacement;
+            return true;
+        }
+
+        EditorTextBox.SelectedText = ReplaceTextBox.Text;
+        return true;
+    }
+
+    private static RegexOptions BuildRegexReplaceOptions(bool matchCase)
+    {
+        var options = RegexOptions.Multiline;
+        if (!matchCase)
+        {
+            options |= RegexOptions.IgnoreCase;
+        }
+
+        return options;
     }
 
     private List<(int Start, int Length)> FindAllMatches(string text, string query)
@@ -420,9 +530,14 @@ public partial class MainWindow
             return;
         }
 
-        if (EditorTextBox.SelectionLength > 0 && string.Equals(EditorTextBox.SelectedText, query, StringComparison.OrdinalIgnoreCase))
+        if (!TryReplaceCurrentMatch())
         {
-            EditorTextBox.SelectedText = ReplaceTextBox.Text;
+            FindNextInternal();
+            if (!TryReplaceCurrentMatch())
+            {
+                FlashNotFound();
+                return;
+            }
         }
 
         ResetFindHighlight();
@@ -446,13 +561,7 @@ public partial class MainWindow
         {
             try
             {
-                var options = RegexOptions.Multiline;
-                if (!matchCase)
-                {
-                    options |= RegexOptions.IgnoreCase;
-                }
-
-                newText = await Task.Run(() => Regex.Replace(sourceText, query, replacementText, options));
+                newText = await Task.Run(() => Regex.Replace(sourceText, query, replacementText, BuildRegexReplaceOptions(matchCase)));
             }
             catch
             {
@@ -462,8 +571,9 @@ public partial class MainWindow
         }
         else
         {
-            var options = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
-            newText = await Task.Run(() => Regex.Replace(sourceText, Regex.Escape(query), replacementText, options));
+            var options = BuildRegexReplaceOptions(matchCase);
+            var pattern = WholeWordCheckBox.IsChecked == true ? $@"\b{Regex.Escape(query)}\b" : Regex.Escape(query);
+            newText = await Task.Run(() => Regex.Replace(sourceText, pattern, replacementText, options));
         }
 
         var caretPos = EditorTextBox.CaretOffset;

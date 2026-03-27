@@ -10,7 +10,7 @@ public partial class UnsavedChangesDialog : Window
     {
         InitializeComponent();
         FileNameText.Text = fileName;
-        MessageText.Text = "If you don't save, your changes will be lost.";
+        MessageText.Text = "Your latest edits have not been saved. If you close now, those changes will be lost.";
     }
 
     private void SaveButton_OnClick(object sender, RoutedEventArgs e)

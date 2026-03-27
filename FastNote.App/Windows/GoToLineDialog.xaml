@@ -3,8 +3,8 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Title="Go to line"
-    Width="392"
-    Height="214"
+    Width="404"
+    Height="254"
     WindowStartupLocation="CenterOwner"
     ResizeMode="NoResize"
     ShowInTaskbar="False"
@@ -15,8 +15,9 @@
     FontFamily="{DynamicResource EditorFont}"
     Icon="pack://application:,,,/Assets/txtfile.ico">
     <Border Margin="12" Background="{DynamicResource PopupBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Effect="{StaticResource PopupShadow}">
-        <Grid Margin="20">
+        <Grid Margin="22">
             <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -24,9 +25,10 @@
             </Grid.RowDefinitions>
 
             <TextBlock Style="{StaticResource DialogTitleTextStyle}" Text="Go to line" />
-            <TextBlock Grid.Row="1" Margin="0,10,0,8" Style="{StaticResource DialogLabelTextStyle}" Text="Line number" />
-            <TextBox x:Name="LineBox" Grid.Row="2" Height="36" FontSize="14" Style="{StaticResource FindTextBoxStyle}" />
-            <StackPanel Grid.Row="3" Margin="0,18,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
+            <TextBlock Grid.Row="1" Margin="0,8,0,0" Style="{StaticResource DialogBodyTextStyle}" Text="Jump directly to a line number in the current document." />
+            <TextBlock Grid.Row="2" Margin="0,14,0,8" Style="{StaticResource DialogLabelTextStyle}" Text="Line number" />
+            <TextBox x:Name="LineBox" Grid.Row="3" Height="36" FontSize="14" Style="{StaticResource FindTextBoxStyle}" />
+            <StackPanel Grid.Row="4" Margin="0,18,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
                 <Button Width="82" Height="32" Margin="0,0,8,0" IsDefault="True" Style="{StaticResource DialogPrimaryButtonStyle}" Content="Go" Click="GoButton_OnClick" />
                 <Button Width="82" Height="32" IsCancel="True" Style="{StaticResource DialogButtonStyle}" Content="Cancel" />
             </StackPanel>

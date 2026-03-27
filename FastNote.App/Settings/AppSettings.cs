@@ -5,8 +5,9 @@ namespace FastNote.App.Settings;
 
 public sealed class AppSettings
 {
+    public int SettingsVersion { get; set; } = CurrentSettingsVersion;
+    public const int CurrentSettingsVersion = 2;
     public string Theme { get; set; } = "Dark";
-    public string AppearanceMode { get; set; } = "Classic";
     public bool StatusBarVisible { get; set; } = true;
     public bool RestorePreviousSession { get; set; } = true;
     public bool DefaultWordWrap { get; set; }
@@ -40,7 +41,13 @@ public static class AppSettingsStore
             }
 
             var json = File.ReadAllText(SettingsFilePath);
-            return JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
+            if (settings.SettingsVersion <= 0)
+            {
+                settings.SettingsVersion = AppSettings.CurrentSettingsVersion;
+            }
+
+            return settings;
         }
         catch
         {
@@ -51,6 +58,7 @@ public static class AppSettingsStore
     public static void Save(AppSettings settings)
     {
         Directory.CreateDirectory(SettingsDirectoryPath);
+        settings.SettingsVersion = AppSettings.CurrentSettingsVersion;
         var json = JsonSerializer.Serialize(settings, JsonOptions);
         File.WriteAllText(SettingsFilePath, json);
     }

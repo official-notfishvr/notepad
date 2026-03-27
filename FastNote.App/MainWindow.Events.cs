@@ -208,7 +208,7 @@ public partial class MainWindow
 
         var wasDirty = tab.IsDirty;
         tab.IsDirty = true;
-        tab.Title = string.IsNullOrWhiteSpace(tab.Path) ? "Untitled" : Path.GetFileName(tab.Path);
+        tab.Title = string.IsNullOrWhiteSpace(tab.Path) ? GetDisplayName(tab) : Path.GetFileName(tab.Path);
         tab.LoadedCharacterCount = EditorTextBox.Document?.TextLength ?? 0;
         tab.LoadedLineCount = EditorTextBox.Document?.LineCount ?? 1;
         tab.MarkdownPreviewCacheKey = null;
@@ -244,16 +244,48 @@ public partial class MainWindow
 
     private async void Window_OnDrop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] files && files.Length > 0)
+        if (IsBlockedDropSource(e.OriginalSource as DependencyObject))
         {
-            await OpenFileAsync(files[0]);
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        if (TryGetDroppedFiles(e, out var files))
+        {
+            await OpenFilesInNewTabsAsync(files);
+            e.Handled = true;
         }
     }
 
     private void Window_OnDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        if (IsBlockedDropSource(e.OriginalSource as DependencyObject))
+        {
+            e.Effects = DragDropEffects.None;
+            e.Handled = true;
+            return;
+        }
+
+        e.Effects = TryGetDroppedFiles(e, out _) ? DragDropEffects.Copy : DragDropEffects.None;
         e.Handled = true;
+    }
+
+    private static bool TryGetDroppedFiles(DragEventArgs e, out string[] files)
+    {
+        files = [];
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+        {
+            return false;
+        }
+
+        if (e.Data.GetData(DataFormats.FileDrop) is not string[] droppedFiles || droppedFiles.Length == 0)
+        {
+            return false;
+        }
+
+        files = droppedFiles.Where(File.Exists).ToArray();
+        return files.Length > 0;
     }
 
     private static long CountLineBreaks(string value)
@@ -283,6 +315,21 @@ public partial class MainWindow
                 case Button:
                 case TextBox:
                     return true;
+            }
+
+            source = VisualTreeHelper.GetParent(source);
+        }
+
+        return false;
+    }
+
+    private bool IsBlockedDropSource(DependencyObject? source)
+    {
+        while (source is not null)
+        {
+            if (ReferenceEquals(source, TopChrome))
+            {
+                return true;
             }
 
             source = VisualTreeHelper.GetParent(source);

@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Input;
 using FastNote.App.Settings;
 using ICSharpCode.AvalonEdit.Document;
 using Microsoft.Win32;
@@ -47,6 +48,31 @@ public partial class MainWindow
         await StartLoadingIntoTabAsync(tab, path);
     }
 
+    public async Task OpenFilesInNewTabsAsync(IEnumerable<string> paths)
+    {
+        var validPaths = paths
+            .Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (validPaths.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var path in validPaths)
+        {
+            CaptureActiveTabState();
+            var tab = CreateNewDocumentTab();
+            _tabs.Add(tab);
+            _activeTabIndex = _tabs.Count - 1;
+            PresentTab(tab, forceTextRefresh: true);
+            await StartLoadingIntoTabAsync(tab, path);
+        }
+
+        SaveSessionSnapshot();
+    }
+
     private bool TryRestorePreviousSession()
     {
         if (!_appSettings.RestorePreviousSession)
@@ -78,6 +104,7 @@ public partial class MainWindow
         var tab = CreateNewDocumentTab();
         tab.Title = state.Title;
         tab.Path = state.Path;
+        tab.Kind = DetectDocumentKind(state.Path, state.Title);
         tab.WordWrapEnabled = state.WordWrapEnabled;
         tab.CaretIndex = state.CaretIndex;
         tab.SelectionStart = state.SelectionStart;
@@ -107,6 +134,7 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(tab.Path) && File.Exists(tab.Path))
         {
             tab.Title = Path.GetFileName(tab.Path);
+            tab.Kind = DetectDocumentKind(tab.Path, tab.Title);
             tab.EditorDocument = null;
             tab.IsEditorBacked = false;
             tab.Text = string.Empty;
@@ -462,6 +490,7 @@ public partial class MainWindow
         var shouldKeepMarkdownPreview = tab.IsMarkdownPreviewEnabled;
         tab.Path = path;
         tab.Title = Path.GetFileName(path);
+        tab.Kind = DetectDocumentKind(path, tab.Title);
         tab.Text = string.Empty;
         tab.EditorDocument = null;
         tab.IsDirty = false;
@@ -483,7 +512,7 @@ public partial class MainWindow
         tab.IsTextCacheReady = true;
         tab.IsHydratingText = false;
         tab.AutoActivateEditorWhenReady = false;
-        tab.IsMarkdownPreviewEnabled = shouldKeepMarkdownPreview && SupportsMarkdownPreview(tab);
+        tab.IsMarkdownPreviewEnabled = shouldKeepMarkdownPreview && tab.IsMarkdownDocument;
         tab.MarkdownPreviewCacheKey = null;
         CloseMenus();
         RenderTabs();
@@ -529,8 +558,8 @@ public partial class MainWindow
             var dialog = new SaveFileDialog
             {
                 Filter = "Markdown files (*.md)|*.md|Text files (*.txt)|*.txt|All files (*.*)|*.*",
-                DefaultExt = SupportsMarkdownPreview(tab) ? "md" : "txt",
-                FileName = string.IsNullOrWhiteSpace(path) ? (SupportsMarkdownPreview(tab) ? "Untitled.md" : "Untitled.txt") : Path.GetFileName(path),
+                DefaultExt = tab.IsMarkdownDocument ? "md" : "txt",
+                FileName = string.IsNullOrWhiteSpace(path) ? GetDisplayName(tab) : Path.GetFileName(path),
             };
 
             if (dialog.ShowDialog(this) != true)
@@ -582,7 +611,8 @@ public partial class MainWindow
 
         tab.Path = path;
         tab.Title = Path.GetFileName(path);
-        tab.IsMarkdownPreviewEnabled = tab.IsMarkdownPreviewEnabled && SupportsMarkdownPreview(tab);
+        tab.Kind = DetectDocumentKind(path, tab.Title);
+        tab.IsMarkdownPreviewEnabled = tab.IsMarkdownPreviewEnabled && tab.IsMarkdownDocument;
         tab.MarkdownPreviewCacheKey = null;
         tab.IsDirty = false;
         tab.EncodingLabel = ToEncodingLabel(tab.EncodingKey);
@@ -797,7 +827,7 @@ public partial class MainWindow
         return new DocumentTab
         {
             Id = Guid.NewGuid(),
-            Title = "Untitled",
+            Title = "Untitled.txt",
             EncodingLabel = "UTF-8",
             EncodingKey = "utf-8",
             Text = string.Empty,
@@ -807,6 +837,7 @@ public partial class MainWindow
             WordWrapEnabled = _appSettings.DefaultWordWrap,
             LineEndingKey = "crlf",
             LineEndingLabel = "Windows (CRLF)",
+            Kind = DocumentKind.PlainText,
         };
     }
 
@@ -894,10 +925,9 @@ public partial class MainWindow
     private void RenderTabs()
     {
         TabStripPanel.Children.Clear();
-        var isWindows11Appearance = _appearanceMode == AppAppearanceMode.Windows11;
-        var maxTabWidth = isWindows11Appearance ? 240d : 200d;
-        var minTabWidth = isWindows11Appearance ? 112d : 96d;
-        var tabGap = isWindows11Appearance ? 4d : 2d;
+        var maxTabWidth = 244d;
+        var minTabWidth = 132d;
+        var tabGap = 6d;
         var newTabButtonWidth = 34d;
         var availableWidth = TabStripScrollViewer.ActualWidth;
         if (availableWidth <= 0)
@@ -917,13 +947,15 @@ public partial class MainWindow
 
             var border = new Border
             {
-                Height = isWindows11Appearance ? 30 : 34,
+                Height = 32,
                 Width = targetTabWidth,
                 Background = (Brush)FindResource(isActive ? "TabActiveBrush" : "TabInactiveBrush"),
-                CornerRadius = isWindows11Appearance ? new CornerRadius(8, 8, 0, 0) : new CornerRadius(6, 6, 0, 0),
-                Padding = isWindows11Appearance ? new Thickness(14, 0, 8, 0) : new Thickness(12, 0, 6, 0),
+                CornerRadius = new CornerRadius(10, 10, 0, 0),
+                Padding = new Thickness(14, 0, 8, 0),
                 VerticalAlignment = VerticalAlignment.Bottom,
-                Margin = isWindows11Appearance ? new Thickness(0, 0, 4, 0) : new Thickness(0, 0, 2, 0),
+                Margin = new Thickness(0, 0, 6, 0),
+                Tag = tab.Id,
+                AllowDrop = true,
             };
 
             if (!isActive)
@@ -931,6 +963,10 @@ public partial class MainWindow
                 border.MouseEnter += (_, _) => border.Background = (Brush)FindResource("TabHoverBrush");
                 border.MouseLeave += (_, _) => border.Background = (Brush)FindResource("TabInactiveBrush");
             }
+
+            border.DragEnter += TabBorder_OnDragOver;
+            border.DragOver += TabBorder_OnDragOver;
+            border.Drop += TabBorder_OnDrop;
 
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition());
@@ -949,10 +985,14 @@ public partial class MainWindow
                     Text = tab.DisplayTitle,
                     Foreground = (Brush)FindResource(isActive ? "TabForegroundBrush" : "TabInactiveForegroundBrush"),
                     FontSize = 12,
+                    FontWeight = isActive ? FontWeights.SemiBold : FontWeights.Normal,
                     TextTrimming = TextTrimming.CharacterEllipsis,
                 },
             };
             titleButton.Click += TabButton_OnClick;
+            titleButton.PreviewMouseLeftButtonDown += TabButton_OnPreviewMouseLeftButtonDown;
+            titleButton.PreviewMouseMove += TabButton_OnPreviewMouseMove;
+            titleButton.PreviewMouseLeftButtonUp += TabButton_OnPreviewMouseLeftButtonUp;
 
             var closeButton = new Button
             {
@@ -978,9 +1018,9 @@ public partial class MainWindow
 
         var newTabButton = new Button
         {
-            Width = isWindows11Appearance ? 30 : 32,
-            Height = isWindows11Appearance ? 30 : 32,
-            Margin = isWindows11Appearance ? new Thickness(2, 0, 0, 0) : new Thickness(4, 0, 0, 0),
+            Width = 32,
+            Height = 32,
+            Margin = new Thickness(2, 0, 0, 0),
             VerticalAlignment = VerticalAlignment.Bottom,
             Background = Brushes.Transparent,
             BorderBrush = Brushes.Transparent,
@@ -991,12 +1031,12 @@ public partial class MainWindow
 
         var newTabSurface = new Border
         {
-            Width = isWindows11Appearance ? 28 : 30,
-            Height = isWindows11Appearance ? 28 : 30,
-            CornerRadius = isWindows11Appearance ? new CornerRadius(8) : new CornerRadius(10),
+            Width = 30,
+            Height = 30,
+            CornerRadius = new CornerRadius(9),
             Background = (Brush)FindResource("TabInactiveBrush"),
             BorderBrush = (Brush)FindResource("BorderBrush"),
-            BorderThickness = isWindows11Appearance ? new Thickness(0) : new Thickness(1),
+            BorderThickness = new Thickness(1),
             Child = new TextBlock
             {
                 Text = "\uE710",
@@ -1080,6 +1120,102 @@ public partial class MainWindow
         _activeTabIndex = -1;
         SwitchToTab(Math.Max(0, Math.Min(targetIndex, _tabs.Count - 1)));
         SaveSessionSnapshot();
+    }
+
+    private void MoveTab(Guid draggedTabId, Guid targetTabId)
+    {
+        if (draggedTabId == targetTabId)
+        {
+            return;
+        }
+
+        var sourceIndex = _tabs.FindIndex(tab => tab.Id == draggedTabId);
+        var targetIndex = _tabs.FindIndex(tab => tab.Id == targetTabId);
+        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex == targetIndex)
+        {
+            return;
+        }
+
+        var tab = _tabs[sourceIndex];
+        _tabs.RemoveAt(sourceIndex);
+        if (sourceIndex < targetIndex)
+        {
+            targetIndex--;
+        }
+
+        _tabs.Insert(targetIndex, tab);
+        _activeTabIndex = _tabs.FindIndex(item => item.Id == draggedTabId);
+        RenderTabs();
+        SaveSessionSnapshot();
+    }
+
+    private void TabButton_OnPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Button { Tag: int index })
+        {
+            return;
+        }
+
+        if (index < 0 || index >= _tabs.Count)
+        {
+            return;
+        }
+
+        _pendingTabDragId = _tabs[index].Id;
+        _tabDragStartPoint = e.GetPosition(TabStripScrollViewer);
+    }
+
+    private void TabButton_OnPreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton != MouseButtonState.Pressed || _pendingTabDragId is null || _draggingTabId is not null)
+        {
+            return;
+        }
+
+        var currentPoint = e.GetPosition(TabStripScrollViewer);
+        var delta = currentPoint - _tabDragStartPoint;
+        if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance)
+        {
+            return;
+        }
+
+        _draggingTabId = _pendingTabDragId;
+        try
+        {
+            DragDrop.DoDragDrop((DependencyObject)sender, new DataObject(typeof(Guid), _draggingTabId.Value), DragDropEffects.Move);
+        }
+        finally
+        {
+            _pendingTabDragId = null;
+            _draggingTabId = null;
+        }
+    }
+
+    private void TabButton_OnPreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        _pendingTabDragId = null;
+    }
+
+    private void TabBorder_OnDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(typeof(Guid)) ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void TabBorder_OnDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(typeof(Guid)) || sender is not Border { Tag: Guid targetTabId })
+        {
+            return;
+        }
+
+        if (e.Data.GetData(typeof(Guid)) is Guid draggedTabId)
+        {
+            MoveTab(draggedTabId, targetTabId);
+            SwitchToTab(_tabs.FindIndex(tab => tab.Id == draggedTabId));
+        }
+
+        e.Handled = true;
     }
 
     private async Task OpenWithDialogAsync()

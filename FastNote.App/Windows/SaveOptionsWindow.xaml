@@ -2,11 +2,11 @@
     x:Class="FastNote.App.SaveOptionsWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Title="Save Options"
-    Width="420"
-    Height="348"
-    MinWidth="420"
-    MinHeight="300"
+    Title="Save options"
+    Width="460"
+    Height="360"
+    MinWidth="460"
+    MinHeight="320"
     WindowStartupLocation="CenterOwner"
     ResizeMode="NoResize"
     ShowInTaskbar="False"
@@ -22,17 +22,19 @@
         </Grid.RowDefinitions>
 
         <StackPanel Margin="0,0,0,18">
-            <TextBlock Style="{StaticResource DialogTitleTextStyle}" Text="Save With Options" />
-            <TextBlock Margin="0,8,0,0" Style="{StaticResource DialogBodyTextStyle}" Text="Choose how this file should be encoded and which line ending format to write." />
+            <TextBlock Style="{StaticResource DialogTitleTextStyle}" Text="Save options" />
+            <TextBlock Margin="0,8,0,0" Style="{StaticResource DialogBodyTextStyle}" Text="Choose the encoding and line ending format to write for this file." />
         </StackPanel>
 
-        <StackPanel Grid.Row="1">
-            <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogLabelTextStyle}" Text="Encoding" />
-            <ComboBox x:Name="EncodingComboBox" Margin="0,0,0,16" DisplayMemberPath="Label" SelectedValuePath="Key" />
+        <Border Grid.Row="1" Style="{StaticResource DialogSectionBorderStyle}">
+            <StackPanel>
+                <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogLabelTextStyle}" Text="Encoding" />
+                <ComboBox x:Name="EncodingComboBox" Margin="0,0,0,16" DisplayMemberPath="Label" SelectedValuePath="Key" />
 
-            <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogLabelTextStyle}" Text="Line endings" />
-            <ComboBox x:Name="LineEndingComboBox" DisplayMemberPath="Label" SelectedValuePath="Key" />
-        </StackPanel>
+                <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogLabelTextStyle}" Text="Line endings" />
+                <ComboBox x:Name="LineEndingComboBox" DisplayMemberPath="Label" SelectedValuePath="Key" />
+            </StackPanel>
+        </Border>
 
         <StackPanel Grid.Row="2" Margin="0,18,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
             <Button

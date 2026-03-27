@@ -1,38 +1,59 @@
 using FastNote.App.Settings;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 
 namespace FastNote.App;
 
 public partial class SettingsWindow : Window
 {
     public string SelectedTheme { get; private set; } = "Dark";
-    public string SelectedAppearanceMode { get; private set; } = "Classic";
     public bool ShowStatusBar { get; private set; }
     public bool DefaultWordWrap { get; private set; }
     public bool RestorePreviousSession { get; private set; }
+    public FontFamily SelectedFontFamily { get; private set; }
+    public FontStyle SelectedFontStyle { get; private set; }
+    public FontWeight SelectedFontWeight { get; private set; }
+    public double SelectedFontSize { get; private set; }
 
     public SettingsWindow(AppSettings settings, bool isTxtAssociated)
     {
         InitializeComponent();
 
-        AppearanceComboBox.SelectedIndex = string.Equals(settings.AppearanceMode, "Windows11", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         ThemeComboBox.SelectedIndex = string.Equals(settings.Theme, "Light", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
         StatusBarCheckBox.IsChecked = settings.StatusBarVisible;
         WordWrapCheckBox.IsChecked = settings.DefaultWordWrap;
         RestoreSessionCheckBox.IsChecked = settings.RestorePreviousSession;
+        SelectedFontFamily = new FontFamily(string.IsNullOrWhiteSpace(settings.EditorFontFamily) ? "Segoe UI Variable Text" : settings.EditorFontFamily);
+        SelectedFontStyle = string.Equals(settings.EditorFontStyle, "Italic", StringComparison.OrdinalIgnoreCase) ? FontStyles.Italic : FontStyles.Normal;
+        SelectedFontWeight = string.Equals(settings.EditorFontWeight, "Bold", StringComparison.OrdinalIgnoreCase) ? FontWeights.Bold : FontWeights.Normal;
+        SelectedFontSize = settings.EditorFontSize <= 0 ? 14 : settings.EditorFontSize;
+        UpdateFontSummary();
         RefreshAssociationState(isTxtAssociated);
     }
 
     private void SaveButton_OnClick(object sender, RoutedEventArgs e)
     {
-        SelectedAppearanceMode = ((AppearanceComboBox.SelectedItem as ComboBoxItem)?.Content as string) == "Windows 11" ? "Windows11" : "Classic";
-        SelectedTheme = ((ThemeComboBox.SelectedItem as ComboBoxItem)?.Content as string) ?? "Dark";
+        SelectedTheme = ThemeComboBox.SelectedIndex == 1 ? "Light" : "Dark";
         ShowStatusBar = StatusBarCheckBox.IsChecked == true;
         DefaultWordWrap = WordWrapCheckBox.IsChecked == true;
         RestorePreviousSession = RestoreSessionCheckBox.IsChecked == true;
         DialogResult = true;
+    }
+
+    private void ChooseFontButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new FontPickerDialog(SelectedFontFamily, SelectedFontStyle, SelectedFontWeight, SelectedFontSize) { Owner = this };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        SelectedFontFamily = dialog.SelectedFontFamily;
+        SelectedFontStyle = dialog.SelectedFontStyle;
+        SelectedFontWeight = dialog.SelectedFontWeight;
+        SelectedFontSize = dialog.SelectedFontSize;
+        UpdateFontSummary();
     }
 
     private void InstallAssociationButton_OnClick(object sender, RoutedEventArgs e)
@@ -60,5 +81,15 @@ public partial class SettingsWindow : Window
         }
 
         DragMove();
+    }
+
+    private void UpdateFontSummary()
+    {
+        var styleLabel =
+            SelectedFontWeight == FontWeights.Bold && SelectedFontStyle == FontStyles.Italic ? "Bold Italic"
+            : SelectedFontWeight == FontWeights.Bold ? "Bold"
+            : SelectedFontStyle == FontStyles.Italic ? "Italic"
+            : "Regular";
+        FontSummaryText.Text = $"{SelectedFontFamily.Source}, {SelectedFontSize:N0} pt, {styleLabel}";
     }
 }

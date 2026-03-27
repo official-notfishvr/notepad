@@ -12,19 +12,15 @@ namespace FastNote.App;
 
 public partial class MainWindow
 {
+    private const string ShellName = "FastNote";
+
     private static AppThemeMode GetThemeModeFromSettings(string? theme)
     {
         return string.Equals(theme, "Light", StringComparison.OrdinalIgnoreCase) ? AppThemeMode.Light : AppThemeMode.Dark;
     }
 
-    private static AppAppearanceMode GetAppearanceModeFromSettings(string? appearanceMode)
-    {
-        return string.Equals(appearanceMode, "Windows11", StringComparison.OrdinalIgnoreCase) ? AppAppearanceMode.Windows11 : AppAppearanceMode.Classic;
-    }
-
     private void ApplySavedSettings()
     {
-        ApplyAppearanceMode(GetAppearanceModeFromSettings(_appSettings.AppearanceMode));
         ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
         _statusBarVisible = _appSettings.StatusBarVisible;
         StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
@@ -51,7 +47,6 @@ public partial class MainWindow
     private void SaveSettings()
     {
         _appSettings.Theme = _themeMode == AppThemeMode.Light ? "Light" : "Dark";
-        _appSettings.AppearanceMode = _appearanceMode == AppAppearanceMode.Windows11 ? "Windows11" : "Classic";
         _appSettings.StatusBarVisible = _statusBarVisible;
         _appSettings.EditorFontFamily = _editorFontFamily.Source;
         _appSettings.EditorFontStyle = _editorFontStyle == FontStyles.Italic ? "Italic" : "Normal";
@@ -73,13 +68,19 @@ public partial class MainWindow
             return;
         }
 
-        _appSettings.AppearanceMode = dialog.SelectedAppearanceMode;
         _appSettings.Theme = dialog.SelectedTheme;
         _appSettings.StatusBarVisible = dialog.ShowStatusBar;
         _appSettings.DefaultWordWrap = dialog.DefaultWordWrap;
         _appSettings.RestorePreviousSession = dialog.RestorePreviousSession;
+        _editorFontFamily = dialog.SelectedFontFamily;
+        _editorFontStyle = dialog.SelectedFontStyle;
+        _editorFontWeight = dialog.SelectedFontWeight;
 
-        ApplyAppearanceMode(GetAppearanceModeFromSettings(_appSettings.AppearanceMode));
+        EditorTextBox.FontFamily = _editorFontFamily;
+        EditorTextBox.FontStyle = _editorFontStyle;
+        EditorTextBox.FontWeight = _editorFontWeight;
+        EditorTextBox.FontSize = dialog.SelectedFontSize;
+
         _statusBarVisible = _appSettings.StatusBarVisible;
         StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
 
@@ -91,9 +92,9 @@ public partial class MainWindow
     private void UpdateTitle()
     {
         var tab = GetActiveTab();
-        var displayName = tab is null || string.IsNullOrWhiteSpace(tab.Path) ? tab?.Title ?? "Untitled" : Path.GetFileName(tab.Path);
+        var displayName = GetDisplayName(tab);
         var dirtySuffix = tab?.IsDirty == true ? " •" : string.Empty;
-        Title = $"{displayName}{dirtySuffix} - Notepad";
+        Title = $"{displayName}{dirtySuffix} - {ShellName}";
     }
 
     private void UpdateLoadingUi()
@@ -153,9 +154,9 @@ public partial class MainWindow
             }
         }
 
-        CharacterCountText.Text = $"{tab?.LoadedCharacterCount ?? (EditorTextBox.Document?.TextLength ?? 0):N0} characters";
-        LineEndingText.Text = tab?.LineEndingLabel ?? "Windows (CRLF)";
-        EncodingText.Text = tab?.EncodingLabel ?? "UTF-8";
+        CharacterCountText.Text = $"{tab?.LoadedCharacterCount ?? (EditorTextBox.Document?.TextLength ?? 0):N0} chars";
+        LineEndingText.Text = tab?.CanShowEncodingAndLineEndings == true ? tab.LineEndingLabel : "Windows (CRLF)";
+        EncodingText.Text = tab?.CanShowEncodingAndLineEndings == true ? tab.EncodingLabel : "UTF-8";
 
         UpdateZoomStatus();
     }
@@ -204,21 +205,16 @@ public partial class MainWindow
         ListMenuPopup.IsOpen = false;
     }
 
-    private void ApplyAppearanceMode(AppAppearanceMode appearanceMode)
+    private void ApplyHybridShellLayout()
     {
-        _appearanceMode = appearanceMode;
-        var isWindows11 = appearanceMode == AppAppearanceMode.Windows11;
-
-        ClassicMenuRow.Visibility = isWindows11 ? Visibility.Collapsed : Visibility.Visible;
-        Windows11MenuRow.Visibility = isWindows11 ? Visibility.Visible : Visibility.Collapsed;
-
-        FindPanel.Margin = new Thickness(68, 8, 68, 10);
+        FindPanel.Margin = new Thickness(68, 12, 68, 0);
         FindPanel.Background = GetResourceBrush("PopupBackgroundBrush", Colors.Transparent);
         FindPanel.BorderThickness = new Thickness(1);
         FindPanel.CornerRadius = new CornerRadius(12);
         FindPanel.VerticalAlignment = VerticalAlignment.Top;
-        FindPanel.HorizontalAlignment = HorizontalAlignment.Center;
-        FindPanel.Width = 860;
+        FindPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        FindPanel.Width = double.NaN;
+        FindPanel.MaxWidth = 920;
 
         UpdateFindPanelControls();
         RenderTabs();
@@ -245,40 +241,40 @@ public partial class MainWindow
         _themeMode = themeMode;
         var dark = themeMode == AppThemeMode.Dark;
 
-        SetBrush("WindowBackgroundBrush", dark ? "#FF1C1C1C" : "#FFF3F3F3");
-        SetBrush("ChromeBrush", dark ? (_appearanceMode == AppAppearanceMode.Windows11 ? "#FF19003A" : "#FF282828") : "#FFE9E9E9");
-        SetBrush("MenuBrush", dark ? (_appearanceMode == AppAppearanceMode.Windows11 ? "#FF281C49" : "#FF282828") : "#FFE9E9E9");
-        SetBrush("SurfaceBrush", dark ? "#FF282828" : "#FFFFFFFF");
+        SetBrush("WindowBackgroundBrush", dark ? "#FF202020" : "#FFF7F7F7");
+        SetBrush("ChromeBrush", dark ? "#FF272727" : "#FFF2F2F2");
+        SetBrush("MenuBrush", dark ? "#FF272727" : "#FFF2F2F2");
+        SetBrush("SurfaceBrush", dark ? "#FF2B2B2B" : "#FFFFFFFF");
         SetBrush("SurfaceRaisedBrush", dark ? "#FF323232" : "#FFF3F3F3");
-        SetBrush("EditorBackgroundBrush", dark ? "#FF1C1C1C" : "#FFFFFFFF");
-        SetBrush("EditorForegroundBrush", dark ? "#FFFCFCFC" : "#FF1A1A1A");
-        SetBrush("EditorMutedBrush", dark ? "#FF8A8A8A" : "#FF6C6C6C");
-        SetBrush("BorderBrush", dark ? "#FF3A3A3A" : "#FFCCCCCC");
-        SetBrush("DividerBrush", dark ? "#FF3A3A3A" : "#FFCCCCCC");
-        SetBrush("TabActiveBrush", dark ? "#FF1C1C1C" : "#FFFFFFFF");
-        SetBrush("TabInactiveBrush", dark ? "#00000000" : "#00000000");
-        SetBrush("TabHoverBrush", dark ? "#FF2A2A2A" : "#FFE4E4E4");
-        SetBrush("TabForegroundBrush", dark ? "#FFFCFCFC" : "#FF1A1A1A");
-        SetBrush("TabInactiveForegroundBrush", dark ? "#FFB0B0B0" : "#FF6C6C6C");
-        SetBrush("AccentBrush", dark ? "#FF60CDFF" : "#FF0067C0");
-        SetBrush("AccentSoftBrush", dark ? "#1A60CDFF" : "#1A0067C0");
-        SetBrush("StatusBrush", dark ? "#FF282828" : "#FFE9E9E9");
-        SetBrush("StatusForegroundBrush", dark ? "#FFB0B0B0" : "#FF404040");
-        SetBrush("MenuForegroundBrush", dark ? "#FFFCFCFC" : "#FF1A1A1A");
-        SetBrush("MenuSelectionBrush", dark ? "#FF383838" : "#FFE0E0E0");
-        SetBrush("PopupBackgroundBrush", dark ? "#FF2C2C2C" : "#FFFFFFFF");
-        SetBrush("PopupBorderBrush", dark ? "#FF484848" : "#FFCCCCCC");
-        SetBrush("InputBackgroundBrush", dark ? "#FF333333" : "#FFFFFFFF");
-        SetBrush("InputBorderBrush", dark ? "#FF545454" : "#FFAAAAAA");
-        SetBrush("InputFocusBrush", dark ? "#FF60CDFF" : "#FF0067C0");
-        SetBrush("ButtonHoverBrush", dark ? "#FF383838" : "#FFE0E0E0");
-        SetBrush("ButtonPressedBrush", dark ? "#FF444444" : "#FFD0D0D0");
-        SetBrush("ScrollThumbBrush", dark ? "#FF606060" : "#FFAAAAAA");
-        SetBrush("ScrollThumbHoverBrush", dark ? "#FF808080" : "#FF888888");
+        SetBrush("EditorBackgroundBrush", dark ? "#FF1F1F1F" : "#FFFFFFFF");
+        SetBrush("EditorForegroundBrush", dark ? "#FFF5F5F5" : "#FF1A1A1A");
+        SetBrush("EditorMutedBrush", dark ? "#FFABABAB" : "#FF5F5F5F");
+        SetBrush("BorderBrush", dark ? "#FF3B3B3B" : "#FFD6D6D6");
+        SetBrush("DividerBrush", dark ? "#FF404040" : "#FFD2D2D2");
+        SetBrush("TabActiveBrush", dark ? "#FF1F1F1F" : "#FFFFFFFF");
+        SetBrush("TabInactiveBrush", dark ? "#FF2A2A2A" : "#00FFFFFF");
+        SetBrush("TabHoverBrush", dark ? "#FF343434" : "#FFEAEAEA");
+        SetBrush("TabForegroundBrush", dark ? "#FFF4F4F4" : "#FF1A1A1A");
+        SetBrush("TabInactiveForegroundBrush", dark ? "#FFC7C7C7" : "#FF5B5B5B");
+        SetBrush("AccentBrush", dark ? "#FF76B9FF" : "#FF0F6CBD");
+        SetBrush("AccentSoftBrush", dark ? "#2976B9FF" : "#1F0F6CBD");
+        SetBrush("StatusBrush", dark ? "#FF262626" : "#FFF1F1F1");
+        SetBrush("StatusForegroundBrush", dark ? "#FFBCBCBC" : "#FF444444");
+        SetBrush("MenuForegroundBrush", dark ? "#FFF5F5F5" : "#FF1A1A1A");
+        SetBrush("MenuSelectionBrush", dark ? "#FF393939" : "#FFE7E7E7");
+        SetBrush("PopupBackgroundBrush", dark ? "#FF2B2B2B" : "#FFFFFFFF");
+        SetBrush("PopupBorderBrush", dark ? "#FF454545" : "#FFD6D6D6");
+        SetBrush("InputBackgroundBrush", dark ? "#FF303030" : "#FFFFFFFF");
+        SetBrush("InputBorderBrush", dark ? "#FF555555" : "#FFC8C8C8");
+        SetBrush("InputFocusBrush", dark ? "#FF8CC6FF" : "#FF0F6CBD");
+        SetBrush("ButtonHoverBrush", dark ? "#FF3B3B3B" : "#FFE6E6E6");
+        SetBrush("ButtonPressedBrush", dark ? "#FF454545" : "#FFD9D9D9");
+        SetBrush("ScrollThumbBrush", dark ? "#FF6B6B6B" : "#FFB0B0B0");
+        SetBrush("ScrollThumbHoverBrush", dark ? "#FF8B8B8B" : "#FF8E8E8E");
         SetBrush("ScrollTrackBrush", dark ? "#14FFFFFF" : "#14000000");
-        SetBrush("FindHighlightBrush", dark ? "#FF60CDFF" : "#FF0067C0");
-        SetBrush("FindHighlightForegroundBrush", dark ? "#FF000000" : "#FFFFFFFF");
-        SetBrush("AppIconBackgroundBrush", dark ? "#FF1F56D8" : "#FF0F6CBD");
+        SetBrush("FindHighlightBrush", dark ? "#FF8CC6FF" : "#FF0F6CBD");
+        SetBrush("FindHighlightForegroundBrush", dark ? "#FF0F1115" : "#FFFFFFFF");
+        SetBrush("AppIconBackgroundBrush", dark ? "#FF0B6CBD" : "#FF0F6CBD");
         var activeTab = GetActiveTab();
         if (activeTab is not null)
         {
@@ -626,6 +622,7 @@ public partial class MainWindow
         }
 
         tab.Title = "Untitled.md";
+        tab.Kind = DocumentKind.Markdown;
         tab.IsMarkdownPreviewEnabled = false;
         RenderTabs();
         UpdateTitle();
@@ -699,19 +696,19 @@ public partial class MainWindow
 
     private void FileMenuButton_OnClick(object sender, RoutedEventArgs e)
     {
-        FileMenuPopup.PlacementTarget = _appearanceMode == AppAppearanceMode.Windows11 ? FileMenuButtonWindows11 : FileMenuButton;
+        FileMenuPopup.PlacementTarget = FileMenuButton;
         TogglePopup(FileMenuPopup);
     }
 
     private void EditMenuButton_OnClick(object sender, RoutedEventArgs e)
     {
-        EditMenuPopup.PlacementTarget = _appearanceMode == AppAppearanceMode.Windows11 ? EditMenuButtonWindows11 : EditMenuButton;
+        EditMenuPopup.PlacementTarget = EditMenuButton;
         TogglePopup(EditMenuPopup);
     }
 
     private void ViewMenuButton_OnClick(object sender, RoutedEventArgs e)
     {
-        ViewMenuPopup.PlacementTarget = _appearanceMode == AppAppearanceMode.Windows11 ? ViewMenuButtonWindows11 : ViewMenuButton;
+        ViewMenuPopup.PlacementTarget = ViewMenuButton;
         TogglePopup(ViewMenuPopup);
     }
 
@@ -778,5 +775,20 @@ public partial class MainWindow
         {
             await OpenFileAsync(path);
         }
+    }
+
+    private static string GetDisplayName(DocumentTab? tab)
+    {
+        if (tab is null)
+        {
+            return "Untitled.txt";
+        }
+
+        if (!string.IsNullOrWhiteSpace(tab.Path))
+        {
+            return Path.GetFileName(tab.Path);
+        }
+
+        return string.IsNullOrWhiteSpace(tab.Title) ? "Untitled.txt" : tab.Title;
     }
 }

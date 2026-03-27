@@ -10,23 +10,7 @@ public static class FileAssociationInstaller
 {
     private const string ProgId = "FastNote.txtfile";
     private static readonly Uri EmbeddedIconUri = new("pack://application:,,,/Assets/txtfile.ico", UriKind.Absolute);
-    private static readonly string[] SupportedExtensions =
-    [
-        ".txt",
-        ".log",
-        ".md",
-        ".json",
-        ".xml",
-        ".csv",
-        ".ini",
-        ".cfg",
-        ".cs",
-        ".py",
-        ".js",
-        ".ts",
-        ".html",
-        ".css",
-    ];
+    private static readonly string[] SupportedExtensions = [".txt", ".log", ".md", ".json", ".xml", ".csv", ".ini", ".cfg", ".cs", ".py", ".js", ".ts", ".html", ".css"];
 
     public static string SupportedExtensionsLabel => "*.txt;*.log;*.md;*.json;*.xml;*.csv;*.ini;*.cfg;*.cs;*.py;*.js;*.ts;*.html;*.css";
 
@@ -49,9 +33,7 @@ public static class FileAssociationInstaller
 
     public static string GetExecutablePath()
     {
-        return Environment.ProcessPath
-            ?? Process.GetCurrentProcess().MainModule?.FileName
-            ?? throw new InvalidOperationException("FastNote executable path could not be determined.");
+        return Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? throw new InvalidOperationException("FastNote executable path could not be determined.");
     }
 
     public static bool IsTxtAssociationInstalledForCurrentApp()

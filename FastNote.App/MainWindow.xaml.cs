@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _statusRefreshTimer;
     private readonly DispatcherTimer _findRefreshTimer;
     private readonly DispatcherTimer _sessionSaveTimer;
+    private readonly SyntaxHighlightColorizer _syntaxHighlightColorizer;
     private readonly SearchHighlightColorizer _searchHighlightColorizer;
     private readonly List<string> _recentFiles;
     private CancellationTokenSource? _matchCountTokenSource;
@@ -42,11 +43,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         _appSettings = AppSettingsStore.Load();
-        _recentFiles = _appSettings.RecentFiles
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Take(10)
-            .ToList();
+        _recentFiles = _appSettings.RecentFiles.Where(path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.OrdinalIgnoreCase).Take(10).ToList();
         InitializeComponent();
         ApplyHybridShellLayout();
         ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
@@ -65,6 +62,8 @@ public partial class MainWindow : Window
         EditorTextBox.Options.EnableTextDragDrop = false;
         EditorTextBox.Options.HighlightCurrentLine = false;
         EditorTextBox.Options.AllowScrollBelowDocument = false;
+        _syntaxHighlightColorizer = new SyntaxHighlightColorizer();
+        EditorTextBox.TextArea.TextView.LineTransformers.Add(_syntaxHighlightColorizer);
         _searchHighlightColorizer = new SearchHighlightColorizer();
         EditorTextBox.TextArea.TextView.LineTransformers.Add(_searchHighlightColorizer);
 

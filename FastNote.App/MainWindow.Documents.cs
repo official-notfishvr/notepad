@@ -4,8 +4,8 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Input;
+using System.Windows.Media;
 using FastNote.App.Settings;
 using ICSharpCode.AvalonEdit.Document;
 using Microsoft.Win32;
@@ -25,12 +25,7 @@ public partial class MainWindow
         new() { Key = "utf-16-be", Label = "Unicode big endian" },
         new() { Key = "ansi", Label = "ANSI" },
     ];
-    private static readonly IReadOnlyList<SaveOptionItem> LineEndingOptions =
-    [
-        new() { Key = "crlf", Label = "Windows (CRLF)" },
-        new() { Key = "lf", Label = "Unix (LF)" },
-        new() { Key = "cr", Label = "Macintosh (CR)" },
-    ];
+    private static readonly IReadOnlyList<SaveOptionItem> LineEndingOptions = [new() { Key = "crlf", Label = "Windows (CRLF)" }, new() { Key = "lf", Label = "Unix (LF)" }, new() { Key = "cr", Label = "Macintosh (CR)" }];
 
     public async Task OpenFileAsync(string path)
     {
@@ -50,10 +45,7 @@ public partial class MainWindow
 
     public async Task OpenFilesInNewTabsAsync(IEnumerable<string> paths)
     {
-        var validPaths = paths
-            .Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var validPaths = paths.Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         if (validPaths.Count == 0)
         {
@@ -157,10 +149,7 @@ public partial class MainWindow
             return;
         }
 
-        var session = new SessionState
-        {
-            ActiveTabIndex = Math.Max(0, _activeTabIndex),
-        };
+        var session = new SessionState { ActiveTabIndex = Math.Max(0, _activeTabIndex) };
         var retainedDrafts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var tab in _tabs)
@@ -648,6 +637,7 @@ public partial class MainWindow
     {
         tab.LastActivatedUtc = DateTime.UtcNow;
         UpdateEditorSurface(tab);
+        ApplySyntaxHighlighting(tab);
 
         var document = tab.EditorDocument ?? CreateDocumentFromTabText(tab);
         SetEditorDocumentFast(document);
@@ -744,6 +734,7 @@ public partial class MainWindow
         if (tab is null)
             return;
 
+        ApplySyntaxHighlighting(tab);
         UpdateEditorSurface(tab);
         UpdateLoadingUi();
         UpdateStatusBar();
@@ -815,6 +806,37 @@ public partial class MainWindow
         };
 
         return normalized.Replace("\n", target, StringComparison.Ordinal);
+    }
+
+    private void ApplySyntaxHighlighting(DocumentTab? tab)
+    {
+        EditorTextBox.SyntaxHighlighting = null;
+        _syntaxHighlightColorizer.Language = ResolveSyntaxLanguage(tab);
+        _syntaxHighlightColorizer.IsDarkTheme = _themeMode == AppThemeMode.Dark;
+        EditorTextBox.TextArea.TextView.Redraw();
+    }
+
+    private static SyntaxLanguage ResolveSyntaxLanguage(DocumentTab? tab)
+    {
+        var candidate = !string.IsNullOrWhiteSpace(tab?.Path) ? tab!.Path : tab?.Title;
+        var extension = Path.GetExtension(candidate);
+        if (string.IsNullOrWhiteSpace(extension))
+        {
+            return SyntaxLanguage.None;
+        }
+
+        return extension.ToLowerInvariant() switch
+        {
+            ".cs" or ".csx" => SyntaxLanguage.CSharp,
+            ".json" => SyntaxLanguage.Json,
+            ".py" => SyntaxLanguage.Python,
+            ".js" or ".cjs" or ".mjs" or ".ts" or ".tsx" => SyntaxLanguage.JavaScript,
+            ".xml" or ".xaml" or ".resx" or ".config" or ".csproj" or ".props" or ".targets" or ".svg" => SyntaxLanguage.Xml,
+            ".html" or ".htm" or ".xhtml" => SyntaxLanguage.Html,
+            ".css" => SyntaxLanguage.Css,
+            ".cpp" or ".cxx" or ".cc" or ".h" or ".hpp" => SyntaxLanguage.Cpp,
+            _ => SyntaxLanguage.None,
+        };
     }
 
     private DocumentTab? GetActiveTab()
@@ -935,9 +957,7 @@ public partial class MainWindow
             availableWidth = Width > 0 ? Width - 250 : 700;
         }
 
-        var computedWidth = _tabs.Count == 0
-            ? maxTabWidth
-            : Math.Floor((availableWidth - newTabButtonWidth - Math.Max(0, _tabs.Count) * tabGap) / _tabs.Count);
+        var computedWidth = _tabs.Count == 0 ? maxTabWidth : Math.Floor((availableWidth - newTabButtonWidth - Math.Max(0, _tabs.Count) * tabGap) / _tabs.Count);
         var targetTabWidth = Math.Clamp(computedWidth, minTabWidth, maxTabWidth);
 
         for (var i = 0; i < _tabs.Count; i++)
@@ -957,6 +977,8 @@ public partial class MainWindow
                 Tag = tab.Id,
                 AllowDrop = true,
             };
+            border.ContextMenu = CreateTabContextMenu(tab.Id);
+            border.MouseRightButtonUp += TabBorder_OnMouseRightButtonUp;
 
             if (!isActive)
             {
@@ -1119,6 +1141,64 @@ public partial class MainWindow
 
         _activeTabIndex = -1;
         SwitchToTab(Math.Max(0, Math.Min(targetIndex, _tabs.Count - 1)));
+        SaveSessionSnapshot();
+    }
+
+    private async Task CloseOtherTabsAsync(Guid tabId)
+    {
+        var retainedTab = _tabs.FirstOrDefault(tab => tab.Id == tabId);
+        if (retainedTab is null)
+        {
+            return;
+        }
+
+        foreach (var tab in _tabs.Where(tab => tab.Id != tabId).ToArray())
+        {
+            if (!await ConfirmDiscardChangesAsync(tab))
+            {
+                return;
+            }
+        }
+
+        foreach (var tab in _tabs.Where(tab => tab.Id != tabId).ToArray())
+        {
+            CancelLoad(tab);
+            ReleaseVirtualDocument(tab);
+            _tabs.Remove(tab);
+        }
+
+        var targetIndex = _tabs.FindIndex(tab => tab.Id == tabId);
+        _activeTabIndex = -1;
+        SwitchToTab(Math.Max(0, targetIndex));
+        SaveSessionSnapshot();
+    }
+
+    private async Task CloseTabsToRightAsync(Guid tabId)
+    {
+        var index = _tabs.FindIndex(tab => tab.Id == tabId);
+        if (index < 0 || index >= _tabs.Count - 1)
+        {
+            return;
+        }
+
+        foreach (var tab in _tabs.Skip(index + 1).ToArray())
+        {
+            if (!await ConfirmDiscardChangesAsync(tab))
+            {
+                return;
+            }
+        }
+
+        foreach (var tab in _tabs.Skip(index + 1).ToArray())
+        {
+            CancelLoad(tab);
+            ReleaseVirtualDocument(tab);
+            _tabs.Remove(tab);
+        }
+
+        var targetIndex = Math.Min(index, _tabs.Count - 1);
+        _activeTabIndex = -1;
+        SwitchToTab(Math.Max(0, targetIndex));
         SaveSessionSnapshot();
     }
 

@@ -13,7 +13,8 @@
     Background="{DynamicResource WindowBackgroundBrush}"
     Foreground="{DynamicResource MenuForegroundBrush}"
     FontFamily="{DynamicResource EditorFont}"
-    Icon="pack://application:,,,/Assets/txtfile.ico">
+    Icon="pack://application:,,,/Assets/txtfile.ico"
+>
     <Border Margin="12" Background="{DynamicResource PopupBackgroundBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12" Effect="{StaticResource PopupShadow}">
         <Grid Margin="22">
             <Grid.RowDefinitions>
@@ -22,7 +23,6 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-
             <TextBlock Style="{StaticResource DialogTitleTextStyle}" Text="Save changes before closing?" />
             <TextBlock x:Name="MessageText" Grid.Row="1" Margin="0,12,0,0" Style="{StaticResource DialogBodyTextStyle}" TextWrapping="Wrap" />
             <Border Grid.Row="2" Margin="0,18,0,0" Padding="14,12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="10">

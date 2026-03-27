@@ -150,7 +150,7 @@
                             Background="{DynamicResource EditorBackgroundBrush}"
                             Foreground="{DynamicResource EditorForegroundBrush}"
                             BorderThickness="0"
-                            Padding="14,10"
+                            Padding="4,10"
                             FontFamily="{StaticResource EditorFont}"
                             FontSize="14"
                             ShowLineNumbers="False"
@@ -163,7 +163,22 @@
                         <Border x:Name="StreamingBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,18,0" Padding="10,4" Background="{DynamicResource AccentSoftBrush}" CornerRadius="12" Visibility="Collapsed">
                             <TextBlock x:Name="LoadingText" Foreground="{DynamicResource AccentBrush}" FontSize="11" Text="Loading…" />
                         </Border>
-                        <Border x:Name="FindPanel" Panel.ZIndex="4" AllowDrop="True" PreviewDrop="Window_OnDrop" PreviewDragOver="Window_OnDragOver" Background="{DynamicResource ChromeBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,1,0,0" Padding="16,12" Visibility="Collapsed" HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="68,12,68,0" MaxWidth="920">
+                        <Border
+                            x:Name="FindPanel"
+                            Panel.ZIndex="4"
+                            AllowDrop="True"
+                            PreviewDrop="Window_OnDrop"
+                            PreviewDragOver="Window_OnDragOver"
+                            Background="{DynamicResource ChromeBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="0,1,0,0"
+                            Padding="16,12"
+                            Visibility="Collapsed"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Top"
+                            Margin="68,12,68,0"
+                            MaxWidth="920"
+                        >
                             <StackPanel>
                                 <Grid VerticalAlignment="Center">
                                     <Grid.ColumnDefinitions>
@@ -205,7 +220,17 @@
                                     <CheckBox x:Name="MatchCaseCheckBox" Content="Match case" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" />
                                     <CheckBox x:Name="WholeWordCheckBox" Content="Whole word" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="12,0,0,0" />
                                     <CheckBox x:Name="UseRegexCheckBox" Content="Regex" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="12,0,0,0" />
-                                    <CheckBox x:Name="HighlightAllCheckBox" Content="Highlight all" Foreground="{DynamicResource MenuForegroundBrush}" FontSize="12" VerticalAlignment="Center" Focusable="False" Margin="12,0,0,0" Checked="HighlightAllCheckBox_OnChecked" Unchecked="HighlightAllCheckBox_OnUnchecked" />
+                                    <CheckBox
+                                        x:Name="HighlightAllCheckBox"
+                                        Content="Highlight all"
+                                        Foreground="{DynamicResource MenuForegroundBrush}"
+                                        FontSize="12"
+                                        VerticalAlignment="Center"
+                                        Focusable="False"
+                                        Margin="12,0,0,0"
+                                        Checked="HighlightAllCheckBox_OnChecked"
+                                        Unchecked="HighlightAllCheckBox_OnUnchecked"
+                                    />
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -577,23 +602,45 @@
         <Popup x:Name="HeadingMenuPopup" PlacementTarget="{Binding ElementName=HeadingButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
             <Border Style="{StaticResource PopupBorderStyle}" Width="178">
                 <StackPanel>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="# " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="26" Text="Title" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="## " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="18" Text="Subtitle" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="### " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="16" Text="Heading" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="#### " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="14" Text="Subheading" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="##### " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="13" Text="Section" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="###### " Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="12" Text="Subsection" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="" Click="HeadingLevelMenuItem_OnClick"><TextBlock FontSize="12" Text="Body" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="# " Click="HeadingLevelMenuItem_OnClick">
+                        <TextBlock FontSize="26" Text="Title" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="## " Click="HeadingLevelMenuItem_OnClick">
+                        <TextBlock FontSize="18" Text="Subtitle" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="### " Click="HeadingLevelMenuItem_OnClick">
+                        <TextBlock FontSize="16" Text="Heading" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="#### " Click="HeadingLevelMenuItem_OnClick">
+                        <TextBlock FontSize="14" Text="Subheading" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="##### " Click="HeadingLevelMenuItem_OnClick">
+                        <TextBlock FontSize="13" Text="Section" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="###### " Click="HeadingLevelMenuItem_OnClick">
+                        <TextBlock FontSize="12" Text="Subsection" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="" Click="HeadingLevelMenuItem_OnClick">
+                        <TextBlock FontSize="12" Text="Body" />
+                    </Button>
                 </StackPanel>
             </Border>
         </Popup>
         <Popup x:Name="ListMenuPopup" PlacementTarget="{Binding ElementName=ListButton}" Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
             <Border Style="{StaticResource PopupBorderStyle}" Width="178">
                 <StackPanel>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="bullet" Click="ListMenuItem_OnClick"><TextBlock Text="Bulleted list" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="number" Click="ListMenuItem_OnClick"><TextBlock Text="Numbered list" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="indent-more" Click="ListMenuItem_OnClick"><TextBlock Text="Increase indent" /></Button>
-                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="indent-less" Click="ListMenuItem_OnClick"><TextBlock Text="Decrease indent" /></Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="bullet" Click="ListMenuItem_OnClick">
+                        <TextBlock Text="Bulleted list" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="number" Click="ListMenuItem_OnClick">
+                        <TextBlock Text="Numbered list" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="indent-more" Click="ListMenuItem_OnClick">
+                        <TextBlock Text="Increase indent" />
+                    </Button>
+                    <Button Style="{StaticResource PopupRowButtonStyle}" Tag="indent-less" Click="ListMenuItem_OnClick">
+                        <TextBlock Text="Decrease indent" />
+                    </Button>
                 </StackPanel>
             </Border>
         </Popup>

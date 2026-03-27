@@ -13,42 +13,29 @@
     Background="{DynamicResource WindowBackgroundBrush}"
     Foreground="{DynamicResource MenuForegroundBrush}"
     FontFamily="{DynamicResource EditorFont}"
-    Icon="pack://application:,,,/Assets/txtfile.ico">
+    Icon="pack://application:,,,/Assets/txtfile.ico"
+>
     <Grid Margin="22">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
-
         <StackPanel Margin="0,0,0,18">
             <TextBlock Style="{StaticResource DialogTitleTextStyle}" Text="Save options" />
             <TextBlock Margin="0,8,0,0" Style="{StaticResource DialogBodyTextStyle}" Text="Choose the encoding and line ending format to write for this file." />
         </StackPanel>
-
         <Border Grid.Row="1" Style="{StaticResource DialogSectionBorderStyle}">
             <StackPanel>
                 <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogLabelTextStyle}" Text="Encoding" />
                 <ComboBox x:Name="EncodingComboBox" Margin="0,0,0,16" DisplayMemberPath="Label" SelectedValuePath="Key" />
-
                 <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogLabelTextStyle}" Text="Line endings" />
                 <ComboBox x:Name="LineEndingComboBox" DisplayMemberPath="Label" SelectedValuePath="Key" />
             </StackPanel>
         </Border>
-
         <StackPanel Grid.Row="2" Margin="0,18,0,0" HorizontalAlignment="Right" Orientation="Horizontal">
-            <Button
-                Width="84"
-                Margin="0,0,8,0"
-                IsDefault="True"
-                Style="{StaticResource DialogPrimaryButtonStyle}"
-                Content="Save"
-                Click="SaveButton_OnClick" />
-            <Button
-                Width="84"
-                IsCancel="True"
-                Style="{StaticResource DialogButtonStyle}"
-                Content="Cancel" />
+            <Button Width="84" Margin="0,0,8,0" IsDefault="True" Style="{StaticResource DialogPrimaryButtonStyle}" Content="Save" Click="SaveButton_OnClick" />
+            <Button Width="84" IsCancel="True" Style="{StaticResource DialogButtonStyle}" Content="Cancel" />
         </StackPanel>
     </Grid>
 </Window>

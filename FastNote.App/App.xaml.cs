@@ -1,5 +1,5 @@
-using System.Windows;
 using System.Text;
+using System.Windows;
 
 namespace FastNote.App;
 

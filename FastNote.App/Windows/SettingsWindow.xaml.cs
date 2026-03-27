@@ -1,7 +1,7 @@
-using FastNote.App.Settings;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using FastNote.App.Settings;
 
 namespace FastNote.App;
 
@@ -65,9 +65,7 @@ public partial class SettingsWindow : Window
 
     private void RefreshAssociationState(bool isTxtAssociated)
     {
-        AssociationDescriptionText.Text = isTxtAssociated
-            ? "Double-clicking supported text and code files already opens in FastNote."
-            : "Supported text and code files are still opening in another app.";
+        AssociationDescriptionText.Text = isTxtAssociated ? "Double-clicking supported text and code files already opens in FastNote." : "Supported text and code files are still opening in another app.";
         AssociationPathText.Text = FileAssociationInstaller.GetIconPath();
         AssociationExtensionsText.Text = $"Extensions: {FileAssociationInstaller.SupportedExtensionsLabel}";
         InstallAssociationButton.Content = isTxtAssociated ? "Reinstall" : "Set as default";

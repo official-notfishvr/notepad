@@ -21,13 +21,9 @@ public sealed class AppSettings
 
 public static class AppSettingsStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-    };
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
-    public static string SettingsDirectoryPath =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FastNote");
+    public static string SettingsDirectoryPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FastNote");
 
     public static string SettingsFilePath => Path.Combine(SettingsDirectoryPath, "settings.json");
 

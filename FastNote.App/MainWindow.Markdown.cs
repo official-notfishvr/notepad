@@ -15,9 +15,7 @@ public partial class MainWindow
     {
         var candidate = !string.IsNullOrWhiteSpace(path) ? path : title;
         var extension = Path.GetExtension(candidate);
-        return string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".markdown", StringComparison.OrdinalIgnoreCase)
-            ? DocumentKind.Markdown
-            : DocumentKind.PlainText;
+        return string.Equals(extension, ".md", StringComparison.OrdinalIgnoreCase) || string.Equals(extension, ".markdown", StringComparison.OrdinalIgnoreCase) ? DocumentKind.Markdown : DocumentKind.PlainText;
     }
 
     private static bool SupportsMarkdownPreview(DocumentTab? tab)

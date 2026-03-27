@@ -1,4 +1,3 @@
-using FastNote.App.Settings;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -7,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using FastNote.App.Settings;
 
 namespace FastNote.App;
 
@@ -279,6 +279,7 @@ public partial class MainWindow
         if (activeTab is not null)
         {
             activeTab.MarkdownPreviewCacheKey = null;
+            ApplySyntaxHighlighting(activeTab);
         }
         RenderTabs();
         EditorTextBox.TextArea.TextView.Redraw();
@@ -729,11 +730,132 @@ public partial class MainWindow
         }
     }
 
+    private ContextMenu CreateTabContextMenu(Guid tabId)
+    {
+        var menu = new ContextMenu { Style = (Style)FindResource("TabContextMenuStyle"), Tag = tabId };
+
+        menu.Items.Add(CreateTabMenuItem("Close", TabContextClose_OnClick, tabId));
+        menu.Items.Add(CreateTabMenuItem("Close others", TabContextCloseOthers_OnClick, tabId));
+        menu.Items.Add(CreateTabMenuItem("Close tabs to the right", TabContextCloseTabsToRight_OnClick, tabId));
+        menu.Items.Add(new Separator { Style = (Style)FindResource("TabContextSeparatorStyle") });
+        menu.Items.Add(CreateTabMenuItem("Reload", TabContextReload_OnClick, tabId));
+        menu.Items.Add(new Separator { Style = (Style)FindResource("TabContextSeparatorStyle") });
+        menu.Items.Add(CreateTabMenuItem("Open file location", TabContextOpenFileLocation_OnClick, tabId));
+        menu.Items.Add(CreateTabMenuItem("Copy file path", TabContextCopyFilePath_OnClick, tabId));
+        return menu;
+    }
+
+    private MenuItem CreateTabMenuItem(string header, RoutedEventHandler onClick, Guid tabId)
+    {
+        var item = new MenuItem
+        {
+            Header = header,
+            Tag = tabId,
+            Style = (Style)FindResource("TabContextMenuItemStyle"),
+        };
+        item.Click += onClick;
+        return item;
+    }
+
+    private void TabBorder_OnMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Border { Tag: Guid tabId, ContextMenu: ContextMenu menu })
+        {
+            return;
+        }
+
+        var index = _tabs.FindIndex(tab => tab.Id == tabId);
+        if (index >= 0)
+        {
+            SwitchToTab(index);
+        }
+
+        menu.PlacementTarget = (UIElement)sender;
+        menu.IsOpen = true;
+        e.Handled = true;
+    }
+
     private async void TabCloseButton_OnClick(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: Guid tabId })
         {
             await CloseTabAsync(tabId);
+        }
+    }
+
+    private async void TabContextClose_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: Guid tabId })
+        {
+            await CloseTabAsync(tabId);
+        }
+    }
+
+    private async void TabContextCloseOthers_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: Guid tabId })
+        {
+            await CloseOtherTabsAsync(tabId);
+        }
+    }
+
+    private async void TabContextCloseTabsToRight_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: Guid tabId })
+        {
+            await CloseTabsToRightAsync(tabId);
+        }
+    }
+
+    private async void TabContextReload_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: Guid tabId })
+        {
+            return;
+        }
+
+        var tab = _tabs.FirstOrDefault(item => item.Id == tabId);
+        if (tab is null || string.IsNullOrWhiteSpace(tab.Path))
+        {
+            return;
+        }
+
+        var index = _tabs.FindIndex(item => item.Id == tabId);
+        if (index >= 0)
+        {
+            SwitchToTab(index);
+        }
+
+        await StartLoadingIntoTabAsync(tab, tab.Path);
+    }
+
+    private void TabContextOpenFileLocation_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: Guid tabId })
+        {
+            return;
+        }
+
+        var tab = _tabs.FirstOrDefault(item => item.Id == tabId);
+        if (string.IsNullOrWhiteSpace(tab?.Path) || !File.Exists(tab.Path))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{tab.Path}\"") { UseShellExecute = true });
+    }
+
+    private void TabContextCopyFilePath_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: Guid tabId })
+        {
+            return;
+        }
+
+        var tab = _tabs.FirstOrDefault(item => item.Id == tabId);
+        if (!string.IsNullOrWhiteSpace(tab?.Path))
+        {
+            Clipboard.SetText(tab.Path);
         }
     }
 

@@ -28,10 +28,7 @@ public sealed class SessionState
 
 public static class SessionStore
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-    };
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static string SessionDirectoryPath => Path.Combine(AppSettingsStore.SettingsDirectoryPath, "Session");
 
@@ -86,9 +83,7 @@ public static class SessionStore
             {
                 File.Delete(path);
             }
-            catch
-            {
-            }
+            catch { }
         }
     }
 }

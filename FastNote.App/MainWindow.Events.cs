@@ -306,6 +306,7 @@ public partial class MainWindow
     {
         return string.IsNullOrEmpty(value) ? 1 : CountLineBreaks(value) + 1;
     }
+
     private static bool IsInteractiveTitleBarSource(DependencyObject? source)
     {
         while (source is not null)

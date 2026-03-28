@@ -184,12 +184,10 @@ public partial class MainWindow
         foreach (var tab in _tabs)
         {
             CancelLoad(tab);
-            ReleaseVirtualDocument(tab);
         }
 
         SaveSessionSnapshot();
         _sessionSaveTimer.Stop();
-        _statusRefreshTimer.Stop();
         base.OnClosing(e);
     }
 

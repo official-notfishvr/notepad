@@ -52,16 +52,11 @@ public partial class MainWindow
         public string LineEndingKey { get; set; } = "crlf";
         public string LineEndingLabel { get; set; } = "Windows (CRLF)";
         public DateTime LastActivatedUtc { get; set; }
-        public int StreamedToEditorCharacterCount { get; set; }
         public bool IsEditorBacked { get; set; }
-        public bool IsViewportBacked { get; set; }
-        public FileDocument? VirtualDocument { get; set; }
-        public bool IsTextCacheReady { get; set; }
-        public bool IsHydratingText { get; set; }
-        public bool AutoActivateEditorWhenReady { get; set; }
         public bool IsMarkdownPreviewEnabled { get; set; }
         public string? MarkdownPreviewCacheKey { get; set; }
         public DocumentKind Kind { get; set; } = DocumentKind.PlainText;
+        public FileDocument? CoreDocument { get; set; }
 
         public bool IsMarkdownDocument => Kind == DocumentKind.Markdown;
         public bool CanShowFormattingToolbar => IsMarkdownDocument;

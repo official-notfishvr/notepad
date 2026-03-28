@@ -118,7 +118,6 @@ public partial class MainWindow
                 tab.LoadedCharacterCount = draftText.Length;
                 tab.LoadedLineCount = CountVisibleLines(draftText);
                 tab.IsEditorBacked = true;
-                tab.StreamedToEditorCharacterCount = draftText.Length;
                 return tab;
             }
         }
@@ -191,7 +190,6 @@ public partial class MainWindow
     private async Task StartLoadingIntoTabAsync(DocumentTab tab, string path)
     {
         CancelLoad(tab);
-        ReleaseVirtualDocument(tab);
         ResetTabForLoad(tab, path);
 
         if (GetActiveTab()?.Id == tab.Id)
@@ -265,15 +263,10 @@ public partial class MainWindow
 
         tab.IsLoading = true;
         tab.IsEditorBacked = true;
-        tab.IsViewportBacked = false;
         tab.Text = string.Empty;
         tab.EditorDocument = document;
-        tab.IsTextCacheReady = true;
-        tab.IsHydratingText = false;
-        tab.AutoActivateEditorWhenReady = false;
         tab.LoadedCharacterCount = 0;
         tab.LoadedLineCount = 1;
-        tab.StreamedToEditorCharacterCount = 0;
 
         if (active)
         {
@@ -336,7 +329,6 @@ public partial class MainWindow
             tab.EditorDocument!.UndoStack.SizeLimit = 1_024;
             tab.LoadedCharacterCount = tab.EditorDocument.TextLength;
             tab.LoadedLineCount = tab.EditorDocument.LineCount;
-            tab.StreamedToEditorCharacterCount = tab.EditorDocument.TextLength;
             UpdateLoadingUi();
             UpdateStatusBar();
             RefreshMarkdownPreview(tab);
@@ -346,7 +338,6 @@ public partial class MainWindow
             tab.EditorDocument!.UndoStack.SizeLimit = 1_024;
             tab.LoadedCharacterCount = tab.EditorDocument.TextLength;
             tab.LoadedLineCount = tab.EditorDocument.LineCount;
-            tab.StreamedToEditorCharacterCount = tab.EditorDocument.TextLength;
         }
 
         RenderTabs();
@@ -377,14 +368,12 @@ public partial class MainWindow
         if (active)
         {
             AppendEditorChunkPreservingSelection(tab, chunk);
-            tab.StreamedToEditorCharacterCount = tab.EditorDocument?.TextLength ?? 0;
             tab.LoadedLineCount = tab.EditorDocument?.LineCount ?? 1;
             UpdateLoadingUi();
         }
         else
         {
             AppendChunkToDocument(tab, chunk);
-            tab.StreamedToEditorCharacterCount = tab.EditorDocument?.TextLength ?? 0;
             tab.LoadedLineCount = tab.EditorDocument?.LineCount ?? 1;
         }
 
@@ -492,15 +481,10 @@ public partial class MainWindow
         tab.SelectionLength = 0;
         tab.LastActivatedUtc = DateTime.UtcNow;
         tab.IsEditorBacked = true;
-        tab.IsViewportBacked = false;
-        tab.StreamedToEditorCharacterCount = 0;
         tab.EncodingKey = "utf-8";
         tab.EncodingLabel = "UTF-8";
         tab.LineEndingKey = "crlf";
         tab.LineEndingLabel = "Windows (CRLF)";
-        tab.IsTextCacheReady = true;
-        tab.IsHydratingText = false;
-        tab.AutoActivateEditorWhenReady = false;
         tab.IsMarkdownPreviewEnabled = shouldKeepMarkdownPreview && tab.IsMarkdownDocument;
         tab.MarkdownPreviewCacheKey = null;
         CloseMenus();
@@ -620,15 +604,12 @@ public partial class MainWindow
         if (tab is null)
             return;
 
-        if (!tab.IsViewportBacked)
-        {
-            tab.EditorDocument = EditorTextBox.Document;
-            tab.LoadedCharacterCount = tab.EditorDocument?.TextLength ?? 0;
-            tab.LoadedLineCount = tab.EditorDocument?.LineCount ?? 1;
-            tab.CaretIndex = EditorTextBox.CaretOffset;
-            tab.SelectionStart = EditorTextBox.SelectionStart;
-            tab.SelectionLength = EditorTextBox.SelectionLength;
-        }
+        tab.EditorDocument = EditorTextBox.Document;
+        tab.LoadedCharacterCount = tab.EditorDocument?.TextLength ?? 0;
+        tab.LoadedLineCount = tab.EditorDocument?.LineCount ?? 1;
+        tab.CaretIndex = EditorTextBox.CaretOffset;
+        tab.SelectionStart = EditorTextBox.SelectionStart;
+        tab.SelectionLength = EditorTextBox.SelectionLength;
 
         tab.LastActivatedUtc = DateTime.UtcNow;
     }
@@ -643,7 +624,6 @@ public partial class MainWindow
         SetEditorDocumentFast(document);
 
         EditorTextBox.IsReadOnly = false;
-        tab.StreamedToEditorCharacterCount = document.TextLength;
 
         var safeLen = EditorTextBox.Document?.TextLength ?? 0;
         var caretIndex = Math.Min(tab.CaretIndex, safeLen);
@@ -938,12 +918,6 @@ public partial class MainWindow
         }
     }
 
-    private void ReleaseVirtualDocument(DocumentTab tab)
-    {
-        tab.VirtualDocument?.Dispose();
-        tab.VirtualDocument = null;
-    }
-
     private void RenderTabs()
     {
         TabStripPanel.Children.Clear();
@@ -1125,7 +1099,6 @@ public partial class MainWindow
             return;
 
         CancelLoad(tab);
-        ReleaseVirtualDocument(tab);
 
         var targetIndex = index == _activeTabIndex ? Math.Max(0, Math.Min(index, _tabs.Count - 2)) : _activeTabIndex;
         _tabs.RemoveAt(index);
@@ -1163,7 +1136,6 @@ public partial class MainWindow
         foreach (var tab in _tabs.Where(tab => tab.Id != tabId).ToArray())
         {
             CancelLoad(tab);
-            ReleaseVirtualDocument(tab);
             _tabs.Remove(tab);
         }
 
@@ -1192,7 +1164,6 @@ public partial class MainWindow
         foreach (var tab in _tabs.Skip(index + 1).ToArray())
         {
             CancelLoad(tab);
-            ReleaseVirtualDocument(tab);
             _tabs.Remove(tab);
         }
 
@@ -1317,7 +1288,6 @@ public partial class MainWindow
             return;
 
         CancelLoad(tab);
-        ReleaseVirtualDocument(tab);
         var replacement = CreateNewDocumentTab();
         var index = _tabs.IndexOf(tab);
         _tabs[index] = replacement;

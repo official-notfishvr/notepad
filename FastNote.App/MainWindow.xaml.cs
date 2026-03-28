@@ -17,7 +17,6 @@ public partial class MainWindow : Window
     private readonly AppSettings _appSettings;
     private readonly List<DocumentTab> _tabs = [];
     private readonly Dictionary<Guid, CancellationTokenSource> _loadTokens = [];
-    private readonly DispatcherTimer _statusRefreshTimer;
     private readonly DispatcherTimer _findRefreshTimer;
     private readonly DispatcherTimer _sessionSaveTimer;
     private readonly SyntaxHighlightColorizer _syntaxHighlightColorizer;
@@ -30,6 +29,7 @@ public partial class MainWindow : Window
     private bool _statusBarVisible = true;
     private bool _replaceVisible;
     private bool _findOptionsVisible = true;
+    private bool _sessionSnapshotPending = true;
     private bool _skipCloseConfirmation;
     private int _activeTabIndex = -1;
     private Point _tabDragStartPoint;
@@ -67,18 +67,6 @@ public partial class MainWindow : Window
         _searchHighlightColorizer = new SearchHighlightColorizer();
         EditorTextBox.TextArea.TextView.LineTransformers.Add(_searchHighlightColorizer);
 
-        _statusRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(400) };
-        _statusRefreshTimer.Tick += (_, _) =>
-        {
-            var tab = GetActiveTab();
-            if (tab is null || tab.IsLoading)
-            {
-                return;
-            }
-
-            RefreshActiveTabUi();
-        };
-        _statusRefreshTimer.Start();
         _findRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
         _findRefreshTimer.Tick += (_, _) =>
         {

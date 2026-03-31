@@ -22,6 +22,8 @@ public partial class MainWindow : Window
     private readonly SyntaxHighlightColorizer _syntaxHighlightColorizer;
     private readonly SearchHighlightColorizer _searchHighlightColorizer;
     private readonly List<string> _recentFiles;
+    private readonly bool _restorePreviousSessionOnStartup;
+    private readonly bool _autoShowSetupOnFirstLaunch;
     private CancellationTokenSource? _matchCountTokenSource;
 
     private AppThemeMode _themeMode = AppThemeMode.Dark;
@@ -40,13 +42,14 @@ public partial class MainWindow : Window
     private FontStyle _editorFontStyle = FontStyles.Normal;
     private FontWeight _editorFontWeight = FontWeights.Normal;
 
-    public MainWindow()
+    public MainWindow(bool restorePreviousSessionOnStartup = true, bool autoShowSetupOnFirstLaunch = true)
     {
+        _restorePreviousSessionOnStartup = restorePreviousSessionOnStartup;
+        _autoShowSetupOnFirstLaunch = autoShowSetupOnFirstLaunch;
         _appSettings = AppSettingsStore.Load();
         _recentFiles = _appSettings.RecentFiles.Where(path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.OrdinalIgnoreCase).Take(10).ToList();
         InitializeComponent();
         ApplyHybridShellLayout();
-        ApplyTheme(GetThemeModeFromSettings(_appSettings.Theme));
         UpdateWindowButtons();
         TabStripScrollViewer.SizeChanged += (_, _) => RenderTabs();
         TabStripScrollViewer.ScrollChanged += (_, _) => UpdateTabStripNavigationState();
@@ -78,12 +81,12 @@ public partial class MainWindow : Window
         _sessionSaveTimer.Tick += (_, _) => SaveSessionSnapshot();
 
         ApplySavedSettings();
-        if (!TryRestorePreviousSession())
+        if (!_restorePreviousSessionOnStartup || !TryRestorePreviousSession())
         {
-            CreateNewTabAndActivate();
+            CreateNewTabAndActivate(saveSession: false);
         }
 
-        RebuildRecentFilesMenu();
+        Dispatcher.BeginInvoke(RebuildRecentFilesMenu, DispatcherPriority.Background);
         EditorTextBox.Focus();
         Loaded += MainWindow_OnLoaded;
         _sessionSaveTimer.Start();
@@ -91,6 +94,11 @@ public partial class MainWindow : Window
 
     private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
+        if (!_autoShowSetupOnFirstLaunch)
+        {
+            return;
+        }
+
         if (_appSettings.SetupCompleted)
         {
             return;

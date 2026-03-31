@@ -43,6 +43,38 @@ public partial class MainWindow
         await StartLoadingIntoTabAsync(tab, path);
     }
 
+    public async Task OpenStartupFilesAsync(IEnumerable<string> paths)
+    {
+        var pendingPaths = paths.Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+
+        if (pendingPaths.Count == 0)
+        {
+            return;
+        }
+
+        if (CanReusePlaceholderTabForFileOpen())
+        {
+            var activeTab = GetActiveTab();
+            if (activeTab is not null)
+            {
+                var firstPath = pendingPaths[0];
+                pendingPaths.RemoveAt(0);
+                await StartLoadingIntoTabAsync(activeTab, firstPath);
+            }
+        }
+
+        if (pendingPaths.Count > 0)
+        {
+            await OpenFilesInNewTabsAsync(pendingPaths);
+        }
+    }
+
+    public async Task OpenFilesFromSecondaryLaunchAsync(IEnumerable<string> paths)
+    {
+        ActivateFromExternalOpen();
+        await OpenFilesInNewTabsAsync(paths);
+    }
+
     public async Task OpenFilesInNewTabsAsync(IEnumerable<string> paths)
     {
         var validPaths = paths.Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -63,6 +95,32 @@ public partial class MainWindow
         }
 
         SaveSessionSnapshot();
+    }
+
+    private bool CanReusePlaceholderTabForFileOpen()
+    {
+        var tab = GetActiveTab();
+        if (tab is null || _tabs.Count != 1 || tab.IsDirty || tab.IsLoading || !string.IsNullOrWhiteSpace(tab.Path))
+        {
+            return false;
+        }
+
+        var text = tab.EditorDocument?.Text ?? tab.Text;
+        return string.IsNullOrEmpty(text) && string.Equals(tab.Title, "Untitled.txt", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void ActivateFromExternalOpen()
+    {
+        if (WindowState == WindowState.Minimized)
+        {
+            WindowState = WindowState.Normal;
+        }
+
+        Show();
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
     }
 
     private bool TryRestorePreviousSession()
@@ -843,12 +901,15 @@ public partial class MainWindow
         };
     }
 
-    private void CreateNewTabAndActivate()
+    private void CreateNewTabAndActivate(bool saveSession = true)
     {
         CaptureActiveTabState();
         _tabs.Add(CreateNewDocumentTab());
         SwitchToTab(_tabs.Count - 1);
-        SaveSessionSnapshot();
+        if (saveSession)
+        {
+            SaveSessionSnapshot();
+        }
     }
 
     private void SwitchToTab(int index)

@@ -217,8 +217,6 @@ public partial class MainWindow
         FindPanel.MaxWidth = 920;
 
         UpdateFindPanelControls();
-        RenderTabs();
-        UpdateStatusBar();
     }
 
     private void UpdateFindPanelControls()

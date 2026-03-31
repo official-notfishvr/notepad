@@ -9,7 +9,7 @@ namespace FastNote.App;
 
 public partial class MainWindow
 {
-    private readonly MarkdownPipeline _markdownPipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+    private MarkdownPipeline? _markdownPipeline;
 
     private static DocumentKind DetectDocumentKind(string? path, string? title)
     {
@@ -73,6 +73,7 @@ public partial class MainWindow
 
     private string BuildMarkdownPreviewHtml(string title, string markdown)
     {
+        _markdownPipeline ??= new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
         var isDark = _themeMode == AppThemeMode.Dark;
         var background = ColorToCss(GetThemeColor("EditorBackgroundBrush", isDark ? Color.FromRgb(0x1C, 0x1C, 0x1C) : Colors.White));
         var foreground = ColorToCss(GetThemeColor("EditorForegroundBrush", isDark ? Color.FromRgb(0xFC, 0xFC, 0xFC) : Color.FromRgb(0x1A, 0x1A, 0x1A)));

@@ -104,6 +104,7 @@ public partial class MainWindow
         StreamingBadge.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
         LoadingText.Text = isLoading ? tab!.LoadingLabel : "Loading…";
         EncodingText.Text = tab?.EncodingLabel ?? "UTF-8";
+        UpdateSpellCheckState(tab);
     }
 
     private void UpdateStatusBar()
@@ -194,6 +195,14 @@ public partial class MainWindow
         var index = EditorTextBox.CaretOffset;
         EditorTextBox.Document.Insert(index, value);
         EditorTextBox.CaretOffset = index + value.Length;
+    }
+
+    private void ReplaceTextRange(int start, int length, string replacement)
+    {
+        EditorTextBox.Document.Replace(start, length, replacement);
+        EditorTextBox.Select(start, replacement.Length);
+        EditorTextBox.CaretOffset = start + replacement.Length;
+        EditorTextBox.Focus();
     }
 
     private void CloseMenus()
@@ -718,6 +727,132 @@ public partial class MainWindow
         HeadingMenuPopup.IsOpen = false;
         ListMenuPopup.IsOpen = false;
         popup.IsOpen = shouldOpen;
+    }
+
+    private void EditorTextBox_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        var position = EditorTextBox.GetPositionFromPoint(e.GetPosition(EditorTextBox));
+        if (!position.HasValue || EditorTextBox.Document is null)
+        {
+            return;
+        }
+
+        var offset = EditorTextBox.Document.GetOffset(position.Value.Location);
+        if (offset < EditorTextBox.SelectionStart || offset > EditorTextBox.SelectionStart + EditorTextBox.SelectionLength)
+        {
+            EditorTextBox.Select(offset, 0);
+        }
+
+        EditorTextBox.CaretOffset = offset;
+        EditorTextBox.Focus();
+    }
+
+    private void EditorTextBox_OnContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        EditorTextBox.ContextMenu = CreateEditorContextMenu();
+    }
+
+    private ContextMenu CreateEditorContextMenu()
+    {
+        var menu = new ContextMenu { Style = (Style)FindResource("TabContextMenuStyle") };
+        var document = EditorTextBox.Document;
+        var hasSuggestionItems = false;
+
+        if (document is not null && _spellCheckColorizer.IsEnabled && _spellCheckColorizer.TryGetSpellingIssue(document, EditorTextBox.CaretOffset, out var issue))
+        {
+            foreach (var suggestion in issue.Suggestions.Distinct(StringComparer.OrdinalIgnoreCase).Take(6))
+            {
+                var suggestionItem = new MenuItem
+                {
+                    Header = suggestion,
+                    Style = (Style)FindResource("TabContextMenuItemStyle"),
+                };
+                suggestionItem.Click += (_, _) => ReplaceTextRange(issue.Start, issue.Length, suggestion);
+                menu.Items.Add(suggestionItem);
+                hasSuggestionItems = true;
+            }
+
+            if (!hasSuggestionItems)
+            {
+                menu.Items.Add(new MenuItem
+                {
+                    Header = "No suggestions",
+                    IsEnabled = false,
+                    Style = (Style)FindResource("TabContextMenuItemStyle"),
+                });
+            }
+
+            var ignoreItem = new MenuItem
+            {
+                Header = $"Ignore \"{issue.Word}\"",
+                Style = (Style)FindResource("TabContextMenuItemStyle"),
+            };
+            ignoreItem.Click += (_, _) =>
+            {
+                _spellCheckColorizer.IgnoreWord(issue.Word);
+                EditorTextBox.TextArea.TextView.Redraw();
+            };
+            menu.Items.Add(ignoreItem);
+
+            var addItem = new MenuItem
+            {
+                Header = $"Add \"{issue.Word}\"",
+                Style = (Style)FindResource("TabContextMenuItemStyle"),
+            };
+            addItem.Click += (_, _) =>
+            {
+                _spellCheckColorizer.AddWordToDictionary(issue.Word);
+                EditorTextBox.TextArea.TextView.Redraw();
+            };
+            menu.Items.Add(addItem);
+            menu.Items.Add(new Separator { Style = (Style)FindResource("TabContextSeparatorStyle") });
+        }
+
+        menu.Items.Add(CreateEditorMenuItem("Cut", () => EditorTextBox.Cut(), CanCutEditorSelection()));
+        menu.Items.Add(CreateEditorMenuItem("Copy", () => EditorTextBox.Copy(), CanCopyEditorSelection()));
+        menu.Items.Add(CreateEditorMenuItem("Paste", () => EditorTextBox.Paste(), CanPasteIntoEditor()));
+        menu.Items.Add(new Separator { Style = (Style)FindResource("TabContextSeparatorStyle") });
+        menu.Items.Add(CreateEditorMenuItem("Select all", () => EditorTextBox.SelectAll(), true));
+        return menu;
+    }
+
+    private bool CanCutEditorSelection()
+    {
+        return !EditorTextBox.IsReadOnly && EditorTextBox.SelectionLength > 0;
+    }
+
+    private bool CanCopyEditorSelection()
+    {
+        return EditorTextBox.SelectionLength > 0;
+    }
+
+    private bool CanPasteIntoEditor()
+    {
+        if (EditorTextBox.IsReadOnly)
+        {
+            return false;
+        }
+
+        try
+        {
+            return Clipboard.ContainsText();
+        }
+        catch
+        {
+            return true;
+        }
+    }
+
+    private MenuItem CreateEditorMenuItem(string header, Action action, bool isEnabled)
+    {
+        var item = new MenuItem
+        {
+            Header = header,
+            IsEnabled = isEnabled,
+            Style = (Style)FindResource("TabContextMenuItemStyle"),
+        };
+        item.Click += (_, _) => action();
+        return item;
     }
 
     private void TabButton_OnClick(object sender, RoutedEventArgs e)

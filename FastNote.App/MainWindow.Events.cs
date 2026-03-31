@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
+using ICSharpCode.AvalonEdit.Rendering;
 
 namespace FastNote.App;
 
@@ -189,6 +190,7 @@ public partial class MainWindow
         SaveSessionSnapshot();
         _sessionSaveTimer.Stop();
         base.OnClosing(e);
+        _spellCheckColorizer.Dispose();
     }
 
     private void EditorTextBox_OnTextChanged(object? sender, EventArgs e)
@@ -219,6 +221,7 @@ public partial class MainWindow
         UpdateTitle();
         UpdateStatusBar();
         RefreshMarkdownPreview(tab);
+        EditorTextBox.TextArea.TextView.InvalidateLayer(KnownLayer.Selection);
 
         if (FindPanel.Visibility == Visibility.Visible)
         {

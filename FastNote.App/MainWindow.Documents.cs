@@ -17,6 +17,7 @@ public partial class MainWindow
     private const int ReadBufferChars = 256 * 1024;
     private const int UiAppendChunkChars = 6 * 1024 * 1024;
     private static readonly TimeSpan UiFlushInterval = TimeSpan.FromMilliseconds(650);
+
     private static readonly IReadOnlyList<SaveOptionItem> EncodingOptions =
     [
         new() { Key = "utf-8", Label = "UTF-8" },
@@ -25,6 +26,7 @@ public partial class MainWindow
         new() { Key = "utf-16-be", Label = "Unicode big endian" },
         new() { Key = "ansi", Label = "ANSI" },
     ];
+
     private static readonly IReadOnlyList<SaveOptionItem> LineEndingOptions = [new() { Key = "crlf", Label = "Windows (CRLF)" }, new() { Key = "lf", Label = "Unix (LF)" }, new() { Key = "cr", Label = "Macintosh (CR)" }];
 
     public async Task OpenFileAsync(string path)
@@ -194,6 +196,24 @@ public partial class MainWindow
         tab.IsEditorBacked = true;
         tab.IsDirty = false;
         return tab;
+    }
+
+    private void UpdateSpellCheckState(DocumentTab? tab)
+    {
+        var isEnabled = _spellCheckColorizer.IsAvailable
+            && tab is not null
+            && !tab.IsLoading
+            && !IsMarkdownPreviewActive(tab)
+            && (tab.IsMarkdownDocument || ResolveSyntaxLanguage(tab) == SyntaxLanguage.None);
+
+        if (_spellCheckColorizer.IsEnabled == isEnabled)
+        {
+            return;
+        }
+
+        _spellCheckColorizer.IsEnabled = isEnabled;
+        _spellCheckColorizer.ClearCache();
+        EditorTextBox.TextArea.TextView.Redraw();
     }
 
     private void SaveSessionSnapshot()

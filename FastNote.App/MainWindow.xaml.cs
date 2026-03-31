@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using FastNote.App.Settings;
@@ -21,6 +22,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _sessionSaveTimer;
     private readonly SyntaxHighlightColorizer _syntaxHighlightColorizer;
     private readonly SearchHighlightColorizer _searchHighlightColorizer;
+    private readonly SpellCheckColorizer _spellCheckColorizer;
     private readonly List<string> _recentFiles;
     private readonly bool _restorePreviousSessionOnStartup;
     private readonly bool _autoShowSetupOnFirstLaunch;
@@ -69,6 +71,10 @@ public partial class MainWindow : Window
         EditorTextBox.TextArea.TextView.LineTransformers.Add(_syntaxHighlightColorizer);
         _searchHighlightColorizer = new SearchHighlightColorizer();
         EditorTextBox.TextArea.TextView.LineTransformers.Add(_searchHighlightColorizer);
+        _spellCheckColorizer = new SpellCheckColorizer();
+        EditorTextBox.TextArea.TextView.BackgroundRenderers.Add(_spellCheckColorizer);
+        EditorTextBox.PreviewMouseRightButtonDown += EditorTextBox_OnPreviewMouseRightButtonDown;
+        EditorTextBox.ContextMenuOpening += EditorTextBox_OnContextMenuOpening;
 
         _findRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
         _findRefreshTimer.Tick += (_, _) =>

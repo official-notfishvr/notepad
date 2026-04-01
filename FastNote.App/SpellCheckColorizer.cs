@@ -163,10 +163,12 @@ internal sealed class SpellCheckColorizer : IBackgroundRenderer, IDisposable
     }
 
     private readonly record struct SpellErrorSpan(int Start, int Length);
+
     private readonly record struct SpellSegment(int Offset, int Length) : ISegment
     {
         public int EndOffset => Offset + Length;
     }
+
     internal readonly record struct SpellingIssue(int Start, int Length, string Word, IReadOnlyList<string> Suggestions);
 
     private sealed class WindowsSpellCheckService : IDisposable
@@ -200,9 +202,7 @@ internal sealed class SpellCheckColorizer : IBackgroundRenderer, IDisposable
                     return new WindowsSpellCheckService(factory, spellChecker);
                 }
             }
-            catch
-            {
-            }
+            catch { }
 
             if (factory is not null)
             {
@@ -301,9 +301,7 @@ internal sealed class SpellCheckColorizer : IBackgroundRenderer, IDisposable
             {
                 _spellChecker.Add(word);
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         public void Ignore(string word)
@@ -317,9 +315,7 @@ internal sealed class SpellCheckColorizer : IBackgroundRenderer, IDisposable
             {
                 _spellChecker.Ignore(word);
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         public void Dispose()

@@ -72,6 +72,7 @@ public partial class MainWindow
         _appSettings.StatusBarVisible = dialog.ShowStatusBar;
         _appSettings.DefaultWordWrap = dialog.DefaultWordWrap;
         _appSettings.RestorePreviousSession = dialog.RestorePreviousSession;
+        _appSettings.EnableFileOpenCache = dialog.EnableFileOpenCache;
         _editorFontFamily = dialog.SelectedFontFamily;
         _editorFontStyle = dialog.SelectedFontStyle;
         _editorFontWeight = dialog.SelectedFontWeight;
@@ -762,11 +763,7 @@ public partial class MainWindow
         {
             foreach (var suggestion in issue.Suggestions.Distinct(StringComparer.OrdinalIgnoreCase).Take(6))
             {
-                var suggestionItem = new MenuItem
-                {
-                    Header = suggestion,
-                    Style = (Style)FindResource("TabContextMenuItemStyle"),
-                };
+                var suggestionItem = new MenuItem { Header = suggestion, Style = (Style)FindResource("TabContextMenuItemStyle") };
                 suggestionItem.Click += (_, _) => ReplaceTextRange(issue.Start, issue.Length, suggestion);
                 menu.Items.Add(suggestionItem);
                 hasSuggestionItems = true;
@@ -774,19 +771,17 @@ public partial class MainWindow
 
             if (!hasSuggestionItems)
             {
-                menu.Items.Add(new MenuItem
-                {
-                    Header = "No suggestions",
-                    IsEnabled = false,
-                    Style = (Style)FindResource("TabContextMenuItemStyle"),
-                });
+                menu.Items.Add(
+                    new MenuItem
+                    {
+                        Header = "No suggestions",
+                        IsEnabled = false,
+                        Style = (Style)FindResource("TabContextMenuItemStyle"),
+                    }
+                );
             }
 
-            var ignoreItem = new MenuItem
-            {
-                Header = $"Ignore \"{issue.Word}\"",
-                Style = (Style)FindResource("TabContextMenuItemStyle"),
-            };
+            var ignoreItem = new MenuItem { Header = $"Ignore \"{issue.Word}\"", Style = (Style)FindResource("TabContextMenuItemStyle") };
             ignoreItem.Click += (_, _) =>
             {
                 _spellCheckColorizer.IgnoreWord(issue.Word);
@@ -794,11 +789,7 @@ public partial class MainWindow
             };
             menu.Items.Add(ignoreItem);
 
-            var addItem = new MenuItem
-            {
-                Header = $"Add \"{issue.Word}\"",
-                Style = (Style)FindResource("TabContextMenuItemStyle"),
-            };
+            var addItem = new MenuItem { Header = $"Add \"{issue.Word}\"", Style = (Style)FindResource("TabContextMenuItemStyle") };
             addItem.Click += (_, _) =>
             {
                 _spellCheckColorizer.AddWordToDictionary(issue.Word);

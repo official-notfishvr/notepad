@@ -11,6 +11,7 @@ public partial class SettingsWindow : Window
     public bool ShowStatusBar { get; private set; }
     public bool DefaultWordWrap { get; private set; }
     public bool RestorePreviousSession { get; private set; }
+    public bool EnableFileOpenCache { get; private set; }
     public FontFamily SelectedFontFamily { get; private set; }
     public FontStyle SelectedFontStyle { get; private set; }
     public FontWeight SelectedFontWeight { get; private set; }
@@ -24,6 +25,7 @@ public partial class SettingsWindow : Window
         StatusBarCheckBox.IsChecked = settings.StatusBarVisible;
         WordWrapCheckBox.IsChecked = settings.DefaultWordWrap;
         RestoreSessionCheckBox.IsChecked = settings.RestorePreviousSession;
+        FileOpenCacheCheckBox.IsChecked = settings.EnableFileOpenCache;
         SelectedFontFamily = new FontFamily(string.IsNullOrWhiteSpace(settings.EditorFontFamily) ? "Segoe UI Variable Text" : settings.EditorFontFamily);
         SelectedFontStyle = string.Equals(settings.EditorFontStyle, "Italic", StringComparison.OrdinalIgnoreCase) ? FontStyles.Italic : FontStyles.Normal;
         SelectedFontWeight = string.Equals(settings.EditorFontWeight, "Bold", StringComparison.OrdinalIgnoreCase) ? FontWeights.Bold : FontWeights.Normal;
@@ -38,6 +40,7 @@ public partial class SettingsWindow : Window
         ShowStatusBar = StatusBarCheckBox.IsChecked == true;
         DefaultWordWrap = WordWrapCheckBox.IsChecked == true;
         RestorePreviousSession = RestoreSessionCheckBox.IsChecked == true;
+        EnableFileOpenCache = FileOpenCacheCheckBox.IsChecked == true;
         DialogResult = true;
     }
 

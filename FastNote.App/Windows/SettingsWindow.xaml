@@ -73,6 +73,7 @@
                         <StackPanel Margin="0,0,18,0">
                             <TextBlock Margin="0,0,0,6" Style="{StaticResource DialogSectionTitleTextStyle}" Text="File Opening" />
                             <TextBlock x:Name="AssociationDescriptionText" Margin="0,0,0,8" Style="{StaticResource DialogBodyTextStyle}" />
+                            <CheckBox x:Name="FileOpenCacheCheckBox" Margin="0,0,0,14" Style="{StaticResource DialogCheckBoxStyle}" Content="Cache reopened files so they open faster after restarting FastNote" />
                             <Border Padding="14,12" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="12">
                                 <StackPanel>
                                     <TextBlock Foreground="{DynamicResource EditorMutedBrush}" FontSize="11" Text="Current registration" />

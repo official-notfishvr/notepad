@@ -200,11 +200,7 @@ public partial class MainWindow
 
     private void UpdateSpellCheckState(DocumentTab? tab)
     {
-        var isEnabled = _spellCheckColorizer.IsAvailable
-            && tab is not null
-            && !tab.IsLoading
-            && !IsMarkdownPreviewActive(tab)
-            && (tab.IsMarkdownDocument || ResolveSyntaxLanguage(tab) == SyntaxLanguage.None);
+        var isEnabled = _spellCheckColorizer.IsAvailable && tab is not null && !tab.IsLoading && !IsMarkdownPreviewActive(tab) && (tab.IsMarkdownDocument || ResolveSyntaxLanguage(tab) == SyntaxLanguage.None);
 
         if (_spellCheckColorizer.IsEnabled == isEnabled)
         {
@@ -281,6 +277,11 @@ public partial class MainWindow
 
         try
         {
+            if (await TryLoadFileFromCacheAsync(tab, path, loadVersion, tokenSource.Token))
+            {
+                return;
+            }
+
             await StreamFileIntoEditorAsync(tab, path, loadVersion, tokenSource.Token);
         }
         catch (OperationCanceledException)
@@ -421,6 +422,49 @@ public partial class MainWindow
         RenderTabs();
         TrimInactiveTabMemory();
         SaveSessionSnapshot();
+        QueuePersistentFileCacheWrite(path, tab.EditorDocument!.Text, tab.EncodingKey, tab.LineEndingKey, tab.LoadedLineCount);
+    }
+
+    private async Task<bool> TryLoadFileFromCacheAsync(DocumentTab tab, string path, int loadVersion, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!_appSettings.EnableFileOpenCache)
+        {
+            return false;
+        }
+
+        if (!FileOpenCache.TryLoad(path, out var snapshot) || snapshot is null || tab.LoadVersion != loadVersion)
+        {
+            return false;
+        }
+
+        var document = new TextDocument(snapshot.Text);
+        document.UndoStack.SizeLimit = 1_024;
+
+        tab.IsLoading = false;
+        tab.LoadingLabel = string.Empty;
+        tab.IsEditorBacked = true;
+        tab.Text = string.Empty;
+        tab.EditorDocument = document;
+        tab.IsDirty = false;
+        tab.EncodingKey = snapshot.EncodingKey;
+        tab.EncodingLabel = ToEncodingLabel(tab.EncodingKey);
+        tab.LineEndingKey = snapshot.LineEndingKey;
+        tab.LineEndingLabel = ToLineEndingLabel(tab.LineEndingKey);
+        tab.LoadedCharacterCount = snapshot.CharacterCount;
+        tab.LoadedLineCount = snapshot.LineCount;
+
+        if (GetActiveTab()?.Id == tab.Id)
+        {
+            PresentTab(tab, forceTextRefresh: true);
+        }
+
+        AddRecentFile(path);
+        RenderTabs();
+        TrimInactiveTabMemory();
+        SaveSessionSnapshot();
+        return true;
     }
 
     private async Task FlushEditorChunkAsync(DocumentTab tab, int loadVersion, StringBuilder pendingUiChunk, long fileLength, CancellationToken cancellationToken)
@@ -673,7 +717,18 @@ public partial class MainWindow
         UpdateTitle();
         RefreshActiveTabUi();
         SaveSessionSnapshot();
+        QueuePersistentFileCacheWrite(path!, normalizedText, tab.EncodingKey, tab.LineEndingKey, tab.LoadedLineCount);
         return true;
+    }
+
+    private void QueuePersistentFileCacheWrite(string path, string text, string encodingKey, string lineEndingKey, long lineCount)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !_appSettings.EnableFileOpenCache)
+        {
+            return;
+        }
+
+        _ = Task.Run(() => FileOpenCache.StoreAsync(path, text, encodingKey, lineEndingKey, lineCount));
     }
 
     private void CaptureActiveTabState()

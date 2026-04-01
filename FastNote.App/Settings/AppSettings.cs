@@ -6,11 +6,12 @@ namespace FastNote.App.Settings;
 public sealed class AppSettings
 {
     public int SettingsVersion { get; set; } = CurrentSettingsVersion;
-    public const int CurrentSettingsVersion = 2;
+    public const int CurrentSettingsVersion = 3;
     public string Theme { get; set; } = "Dark";
     public bool StatusBarVisible { get; set; } = true;
     public bool RestorePreviousSession { get; set; } = true;
-    public bool DefaultWordWrap { get; set; }
+    public bool DefaultWordWrap { get; set; } = true;
+    public bool EnableFileOpenCache { get; set; } = false;
     public string EditorFontFamily { get; set; } = "Segoe UI Variable Text";
     public string EditorFontStyle { get; set; } = "Normal";
     public string EditorFontWeight { get; set; } = "Normal";
@@ -43,6 +44,12 @@ public static class AppSettingsStore
                 settings.SettingsVersion = AppSettings.CurrentSettingsVersion;
             }
 
+            if (settings.SettingsVersion < 3)
+            {
+                settings.EnableFileOpenCache = true;
+            }
+
+            settings.SettingsVersion = AppSettings.CurrentSettingsVersion;
             return settings;
         }
         catch

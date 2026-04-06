@@ -7,7 +7,6 @@ FastNote is a Visual Studio WPF project that mimics the Windows 11 Notepad shell
 - Windows 11 Notepad-inspired light and dark themes
 - Native-style menu bar, single-tab shell, plain editor canvas, and status bar
 - Progressive open path: the first chunk appears immediately, then the rest of the file indexes in the background
-- Virtualized renderer for large files instead of loading the entire document into a text box
 - Word wrap and zoom controls
 
 ## Projects

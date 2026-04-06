@@ -5,8 +5,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using ICSharpCode.AvalonEdit.Document;
-using ICSharpCode.AvalonEdit.Rendering;
 
 namespace FastNote.App;
 
@@ -67,7 +65,7 @@ public partial class MainWindow
                     return;
                 case Key.Y:
                     e.Handled = true;
-                    EditorTextBox.Redo();
+                    _editor.Redo();
                     return;
                 case Key.F:
                     e.Handled = true;
@@ -103,7 +101,7 @@ public partial class MainWindow
                 case Key.D0:
                 case Key.NumPad0:
                     e.Handled = true;
-                    EditorTextBox.FontSize = DefaultEditorFontSize;
+                    _editor.FontSize = DefaultEditorFontSize;
                     UpdateZoomStatus();
                     return;
                 case Key.P:
@@ -209,8 +207,8 @@ public partial class MainWindow
         var wasDirty = tab.IsDirty;
         tab.IsDirty = true;
         tab.Title = string.IsNullOrWhiteSpace(tab.Path) ? GetDisplayName(tab) : Path.GetFileName(tab.Path);
-        tab.LoadedCharacterCount = EditorTextBox.Document?.TextLength ?? 0;
-        tab.LoadedLineCount = EditorTextBox.Document?.LineCount ?? 1;
+        tab.LoadedCharacterCount = _editor.Document?.TextLength ?? 0;
+        tab.LoadedLineCount = _editor.Document?.LineCount ?? 1;
         tab.MarkdownPreviewCacheKey = null;
 
         if (!wasDirty)
@@ -221,7 +219,7 @@ public partial class MainWindow
         UpdateTitle();
         UpdateStatusBar();
         RefreshMarkdownPreview(tab);
-        EditorTextBox.TextArea.TextView.InvalidateLayer(KnownLayer.Selection);
+        _editor.InvalidateSelectionLayer();
 
         if (FindPanel.Visibility == Visibility.Visible)
         {
@@ -237,9 +235,9 @@ public partial class MainWindow
             return;
         }
 
-        tab.CaretIndex = EditorTextBox.CaretOffset;
-        tab.SelectionStart = EditorTextBox.SelectionStart;
-        tab.SelectionLength = EditorTextBox.SelectionLength;
+        tab.CaretIndex = _editor.CaretOffset;
+        tab.SelectionStart = _editor.SelectionStart;
+        tab.SelectionLength = _editor.SelectionLength;
         UpdateStatusBar();
     }
 

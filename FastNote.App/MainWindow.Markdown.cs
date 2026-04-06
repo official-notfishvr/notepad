@@ -221,18 +221,18 @@ public partial class MainWindow
 
     private void WrapSelectionWithMarkdown(string prefix, string suffix, string placeholder)
     {
-        var selectedText = EditorTextBox.SelectedText;
+        var selectedText = _editor.SelectedText;
         var content = string.IsNullOrEmpty(selectedText) ? placeholder : selectedText;
         var replacement = $"{prefix}{content}{suffix}";
-        var start = EditorTextBox.SelectionStart;
-        EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, replacement);
-        EditorTextBox.Select(start + prefix.Length, content.Length);
-        EditorTextBox.Focus();
+        var start = _editor.SelectionStart;
+        _editor.ReplaceText(start, _editor.SelectionLength, replacement);
+        _editor.Select(start + prefix.Length, content.Length);
+        _editor.Focus();
     }
 
     private void PrefixSelectionWithMarkdown(string prefix, string placeholder)
     {
-        var selectedText = EditorTextBox.SelectedText;
+        var selectedText = _editor.SelectedText;
         if (string.IsNullOrWhiteSpace(selectedText))
         {
             InsertTextAtCaret(prefix + placeholder);
@@ -241,15 +241,15 @@ public partial class MainWindow
 
         var lines = selectedText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         var prefixed = string.Join(Environment.NewLine, lines.Select(line => prefix + line));
-        var start = EditorTextBox.SelectionStart;
-        EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, prefixed);
-        EditorTextBox.Select(start, prefixed.Length);
-        EditorTextBox.Focus();
+        var start = _editor.SelectionStart;
+        _editor.ReplaceText(start, _editor.SelectionLength, prefixed);
+        _editor.Select(start, prefixed.Length);
+        _editor.Focus();
     }
 
     private void ClearMarkdownFormatting()
     {
-        var selectedText = EditorTextBox.SelectedText;
+        var selectedText = _editor.SelectedText;
         if (string.IsNullOrEmpty(selectedText))
         {
             return;
@@ -264,16 +264,16 @@ public partial class MainWindow
             .Replace("(", string.Empty, StringComparison.Ordinal)
             .Replace(")", string.Empty, StringComparison.Ordinal);
 
-        var start = EditorTextBox.SelectionStart;
-        EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, cleaned);
-        EditorTextBox.Select(start, cleaned.Length);
+        var start = _editor.SelectionStart;
+        _editor.ReplaceText(start, _editor.SelectionLength, cleaned);
+        _editor.Select(start, cleaned.Length);
     }
 
     private void ApplyHeading(string prefix)
     {
         if (string.IsNullOrEmpty(prefix))
         {
-            var selectedText = EditorTextBox.SelectedText;
+            var selectedText = _editor.SelectedText;
             if (string.IsNullOrWhiteSpace(selectedText))
             {
                 return;
@@ -281,9 +281,9 @@ public partial class MainWindow
 
             var lines = selectedText.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
             var cleaned = string.Join(Environment.NewLine, lines.Select(line => line.TrimStart('#', ' ')));
-            var start = EditorTextBox.SelectionStart;
-            EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, cleaned);
-            EditorTextBox.Select(start, cleaned.Length);
+            var start = _editor.SelectionStart;
+            _editor.ReplaceText(start, _editor.SelectionLength, cleaned);
+            _editor.Select(start, cleaned.Length);
             return;
         }
 
@@ -292,7 +292,7 @@ public partial class MainWindow
 
     private void ApplyListFormatting(string mode)
     {
-        var selectedText = EditorTextBox.SelectedText;
+        var selectedText = _editor.SelectedText;
         if (string.IsNullOrWhiteSpace(selectedText))
         {
             selectedText = "List item";
@@ -319,10 +319,10 @@ public partial class MainWindow
         }
 
         var replacement = string.Join(Environment.NewLine, lines);
-        var start = EditorTextBox.SelectionStart;
-        EditorTextBox.Document.Replace(start, EditorTextBox.SelectionLength, replacement);
-        EditorTextBox.Select(start, replacement.Length);
-        EditorTextBox.Focus();
+        var start = _editor.SelectionStart;
+        _editor.ReplaceText(start, _editor.SelectionLength, replacement);
+        _editor.Select(start, replacement.Length);
+        _editor.Focus();
     }
 
     private void HeadingButton_OnClick(object sender, RoutedEventArgs e)

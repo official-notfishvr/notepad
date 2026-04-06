@@ -4,9 +4,9 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using FastNote.App.Editor;
 using FastNote.App.Settings;
 using ICSharpCode.AvalonEdit.Document;
-using ICSharpCode.AvalonEdit.Rendering;
 
 namespace FastNote.App;
 
@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private readonly Dictionary<Guid, CancellationTokenSource> _loadTokens = [];
     private readonly DispatcherTimer _findRefreshTimer;
     private readonly DispatcherTimer _sessionSaveTimer;
+    private readonly IEditorSurface _editor;
     private readonly SyntaxHighlightColorizer _syntaxHighlightColorizer;
     private readonly SearchHighlightColorizer _searchHighlightColorizer;
     private readonly SpellCheckColorizer _spellCheckColorizer;
@@ -51,30 +52,25 @@ public partial class MainWindow : Window
         _appSettings = AppSettingsStore.Load();
         _recentFiles = _appSettings.RecentFiles.Where(path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.OrdinalIgnoreCase).Take(10).ToList();
         InitializeComponent();
+        _editor = new AvalonEditSurface(EditorHost);
         ApplyHybridShellLayout();
         UpdateWindowButtons();
         TabStripScrollViewer.SizeChanged += (_, _) => RenderTabs();
         TabStripScrollViewer.ScrollChanged += (_, _) => UpdateTabStripNavigationState();
         WireTabChromeHover(TabScrollLeftButton, TabScrollLeftSurface);
         WireTabChromeHover(TabScrollRightButton, TabScrollRightSurface);
-        EditorTextBox.TextChanged += EditorTextBox_OnTextChanged;
-        EditorTextBox.TextArea.SelectionChanged += EditorTextBox_OnSelectionChanged;
-        EditorTextBox.TextArea.Caret.PositionChanged += (_, _) => EditorTextBox_OnSelectionChanged(EditorTextBox, EventArgs.Empty);
-        EditorTextBox.Document = new TextDocument();
-        EditorTextBox.Options.EnableHyperlinks = false;
-        EditorTextBox.Options.EnableEmailHyperlinks = false;
-        EditorTextBox.Options.EnableRectangularSelection = false;
-        EditorTextBox.Options.EnableTextDragDrop = false;
-        EditorTextBox.Options.HighlightCurrentLine = false;
-        EditorTextBox.Options.AllowScrollBelowDocument = false;
+        _editor.TextChanged += EditorTextBox_OnTextChanged;
+        _editor.SelectionChanged += EditorTextBox_OnSelectionChanged;
+        _editor.CaretPositionChanged += (_, _) => EditorTextBox_OnSelectionChanged(_editor, EventArgs.Empty);
+        _editor.SetDocument(new TextDocument());
         _syntaxHighlightColorizer = new SyntaxHighlightColorizer();
-        EditorTextBox.TextArea.TextView.LineTransformers.Add(_syntaxHighlightColorizer);
+        _editor.AddLineTransformer(_syntaxHighlightColorizer);
         _searchHighlightColorizer = new SearchHighlightColorizer();
-        EditorTextBox.TextArea.TextView.LineTransformers.Add(_searchHighlightColorizer);
+        _editor.AddLineTransformer(_searchHighlightColorizer);
         _spellCheckColorizer = new SpellCheckColorizer();
-        EditorTextBox.TextArea.TextView.BackgroundRenderers.Add(_spellCheckColorizer);
-        EditorTextBox.PreviewMouseRightButtonDown += EditorTextBox_OnPreviewMouseRightButtonDown;
-        EditorTextBox.ContextMenuOpening += EditorTextBox_OnContextMenuOpening;
+        _editor.AddBackgroundRenderer(_spellCheckColorizer);
+        _editor.PreviewMouseRightButtonDown += EditorTextBox_OnPreviewMouseRightButtonDown;
+        _editor.ContextMenuOpening += EditorTextBox_OnContextMenuOpening;
 
         _findRefreshTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(180) };
         _findRefreshTimer.Tick += (_, _) =>
@@ -93,7 +89,7 @@ public partial class MainWindow : Window
         }
 
         Dispatcher.BeginInvoke(RebuildRecentFilesMenu, DispatcherPriority.Background);
-        EditorTextBox.Focus();
+        _editor.Focus();
         Loaded += MainWindow_OnLoaded;
         _sessionSaveTimer.Start();
     }

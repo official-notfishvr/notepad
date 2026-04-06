@@ -11,7 +11,7 @@ public partial class MainWindow
 {
     private int GetEditorDocumentLength()
     {
-        return EditorTextBox.Document?.TextLength ?? 0;
+        return _editor.Document?.TextLength ?? 0;
     }
 
     private void FindNextInternal()
@@ -22,8 +22,8 @@ public partial class MainWindow
             return;
         }
 
-        var text = EditorTextBox.Text;
-        var start = EditorTextBox.SelectionStart + EditorTextBox.SelectionLength;
+        var text = _editor.Text;
+        var start = _editor.SelectionStart + _editor.SelectionLength;
 
         int index;
         if (UseRegexCheckBox.IsChecked == true)
@@ -58,8 +58,8 @@ public partial class MainWindow
             return;
         }
 
-        var text = EditorTextBox.Text;
-        var start = Math.Max(0, EditorTextBox.SelectionStart - 1);
+        var text = _editor.Text;
+        var start = Math.Max(0, _editor.SelectionStart - 1);
 
         int index;
         if (UseRegexCheckBox.IsChecked == true)
@@ -88,12 +88,12 @@ public partial class MainWindow
 
     private void ScrollToMatchAndSelect(int index, int length)
     {
-        EditorTextBox.Select(index, length);
+        _editor.Select(index, length);
         var documentLength = GetEditorDocumentLength();
-        var line = EditorTextBox.Document?.GetLineByOffset(documentLength == 0 ? 0 : Math.Clamp(index, 0, documentLength));
-        if (line is not null)
+        var line = _editor.GetLineByOffset(documentLength == 0 ? 0 : Math.Clamp(index, 0, documentLength));
+        if (line is { } lineInfo)
         {
-            EditorTextBox.ScrollToLine(line.LineNumber);
+            _editor.ScrollToLine(lineInfo.LineNumber);
         }
 
         ApplyFindHighlight();
@@ -217,23 +217,23 @@ public partial class MainWindow
 
     private bool IsCurrentSelectionSearchMatch(string sourceText, string query)
     {
-        if (EditorTextBox.SelectionLength <= 0)
+        if (_editor.SelectionLength <= 0)
         {
             return false;
         }
 
         if (UseRegexCheckBox.IsChecked == true)
         {
-            return GetCurrentRegexMatch(sourceText, query, EditorTextBox.SelectionStart, EditorTextBox.SelectionLength) is not null;
+            return GetCurrentRegexMatch(sourceText, query, _editor.SelectionStart, _editor.SelectionLength) is not null;
         }
 
         var comparison = MatchCaseCheckBox.IsChecked == true ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-        if (!string.Equals(EditorTextBox.SelectedText, query, comparison))
+        if (!string.Equals(_editor.SelectedText, query, comparison))
         {
             return false;
         }
 
-        return WholeWordCheckBox.IsChecked != true || IsWholeWordMatch(sourceText, EditorTextBox.SelectionStart, EditorTextBox.SelectionLength);
+        return WholeWordCheckBox.IsChecked != true || IsWholeWordMatch(sourceText, _editor.SelectionStart, _editor.SelectionLength);
     }
 
     private bool TryReplaceCurrentMatch()
@@ -244,7 +244,7 @@ public partial class MainWindow
             return false;
         }
 
-        var sourceText = EditorTextBox.Text;
+        var sourceText = _editor.Text;
         if (!IsCurrentSelectionSearchMatch(sourceText, query))
         {
             return false;
@@ -252,18 +252,18 @@ public partial class MainWindow
 
         if (UseRegexCheckBox.IsChecked == true)
         {
-            var match = GetCurrentRegexMatch(sourceText, query, EditorTextBox.SelectionStart, EditorTextBox.SelectionLength);
+            var match = GetCurrentRegexMatch(sourceText, query, _editor.SelectionStart, _editor.SelectionLength);
             if (match is null)
             {
                 return false;
             }
 
             var replacement = match.Result(ReplaceTextBox.Text);
-            EditorTextBox.SelectedText = replacement;
+            _editor.SelectedText = replacement;
             return true;
         }
 
-        EditorTextBox.SelectedText = ReplaceTextBox.Text;
+        _editor.SelectedText = ReplaceTextBox.Text;
         return true;
     }
 
@@ -340,13 +340,13 @@ public partial class MainWindow
         _searchHighlightColorizer.WholeWord = WholeWordCheckBox.IsChecked == true;
         _searchHighlightColorizer.BackgroundBrush = GetResourceBrush("HighlightAllBrush", Color.FromArgb(0x55, 0xFF, 0xD7, 0x00));
         _searchHighlightColorizer.ForegroundBrush = GetResourceBrush("EditorForegroundBrush", Colors.Black);
-        EditorTextBox.TextArea.TextView.Redraw();
+        _editor.Redraw();
     }
 
     private void RemoveHighlightAdorner()
     {
         _searchHighlightColorizer.IsEnabled = false;
-        EditorTextBox.TextArea.TextView.Redraw();
+        _editor.Redraw();
     }
 
     private void UpdateMatchCountLabel()
@@ -371,8 +371,8 @@ public partial class MainWindow
         _matchCountTokenSource?.Dispose();
         _matchCountTokenSource = new CancellationTokenSource();
         var token = _matchCountTokenSource.Token;
-        var text = EditorTextBox.Text;
-        var currentSelectionStart = EditorTextBox.SelectionStart;
+        var text = _editor.Text;
+        var currentSelectionStart = _editor.SelectionStart;
         var useRegex = UseRegexCheckBox.IsChecked == true;
         var matchCase = MatchCaseCheckBox.IsChecked == true;
         var wholeWord = WholeWordCheckBox.IsChecked == true;
@@ -454,24 +454,24 @@ public partial class MainWindow
         EditMenuPopup.IsOpen = false;
 
         var documentLength = GetEditorDocumentLength();
-        var currentLineNumber = EditorTextBox.Document?.GetLineByOffset(documentLength == 0 ? 0 : Math.Clamp(EditorTextBox.CaretOffset, 0, documentLength)).LineNumber ?? 1;
+        var currentLineNumber = _editor.GetLineByOffset(documentLength == 0 ? 0 : Math.Clamp(_editor.CaretOffset, 0, documentLength))?.LineNumber ?? 1;
         var dialog = new GoToLineDialog(currentLineNumber) { Owner = this };
 
         if (dialog.ShowDialog() == true && dialog.LineNumber > 0)
         {
             var targetLine = dialog.LineNumber - 1;
-            var lineCount = EditorTextBox.Document?.LineCount ?? 1;
+            var lineCount = _editor.Document?.LineCount ?? 1;
             targetLine = Math.Clamp(targetLine, 0, lineCount - 1);
-            var targetDocumentLine = EditorTextBox.Document?.GetLineByNumber(targetLine + 1);
+            var targetDocumentLine = _editor.GetLineByNumber(targetLine + 1);
             if (targetDocumentLine is null)
             {
                 return;
             }
 
-            var charIndex = targetDocumentLine.Offset;
-            EditorTextBox.CaretOffset = charIndex;
-            EditorTextBox.ScrollToLine(targetLine + 1);
-            EditorTextBox.Focus();
+            var charIndex = targetDocumentLine.Value.Offset;
+            _editor.CaretOffset = charIndex;
+            _editor.ScrollToLine(targetLine + 1);
+            _editor.Focus();
         }
     }
 
@@ -552,7 +552,7 @@ public partial class MainWindow
             return;
         }
 
-        var sourceText = EditorTextBox.Text;
+        var sourceText = _editor.Text;
         var replacementText = ReplaceTextBox.Text;
         var useRegex = UseRegexCheckBox.IsChecked == true;
         var matchCase = MatchCaseCheckBox.IsChecked == true;
@@ -576,9 +576,9 @@ public partial class MainWindow
             newText = await Task.Run(() => Regex.Replace(sourceText, pattern, replacementText, options));
         }
 
-        var caretPos = EditorTextBox.CaretOffset;
-        EditorTextBox.Text = newText;
-        EditorTextBox.CaretOffset = Math.Min(caretPos, newText.Length);
+        var caretPos = _editor.CaretOffset;
+        _editor.Text = newText;
+        _editor.CaretOffset = Math.Min(caretPos, newText.Length);
         ResetFindHighlight();
         RemoveHighlightAdorner();
     }

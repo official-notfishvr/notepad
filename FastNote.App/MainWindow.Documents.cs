@@ -209,7 +209,7 @@ public partial class MainWindow
 
         _spellCheckColorizer.IsEnabled = isEnabled;
         _spellCheckColorizer.ClearCache();
-        EditorTextBox.TextArea.TextView.Redraw();
+        _editor.Redraw();
     }
 
     private void SaveSessionSnapshot()
@@ -350,7 +350,7 @@ public partial class MainWindow
         if (active)
         {
             SetEditorDocumentFast(document);
-            EditorTextBox.IsReadOnly = false;
+            _editor.IsReadOnly = false;
 
             UpdateEditorSurface(tab);
             ConfigureWordWrap();
@@ -504,10 +504,10 @@ public partial class MainWindow
 
     private void AppendEditorChunkPreservingSelection(DocumentTab tab, string chunk)
     {
-        var selectionStart = EditorTextBox.SelectionStart;
-        var selectionLength = EditorTextBox.SelectionLength;
-        var caretIndex = EditorTextBox.CaretOffset;
-        var restoreSelection = EditorTextBox.IsKeyboardFocusWithin;
+        var selectionStart = _editor.SelectionStart;
+        var selectionLength = _editor.SelectionLength;
+        var caretIndex = _editor.CaretOffset;
+        var restoreSelection = _editor.IsKeyboardFocusWithin;
 
         AppendChunkToDocument(tab, chunk);
 
@@ -516,11 +516,11 @@ public partial class MainWindow
             return;
         }
 
-        var safeLength = EditorTextBox.Document?.TextLength ?? 0;
+        var safeLength = _editor.Document?.TextLength ?? 0;
         var safeSelectionStart = Math.Min(selectionStart, safeLength);
         var safeSelectionLength = Math.Min(selectionLength, safeLength - safeSelectionStart);
-        EditorTextBox.Select(safeSelectionStart, safeSelectionLength);
-        EditorTextBox.CaretOffset = Math.Min(caretIndex, safeLength);
+        _editor.Select(safeSelectionStart, safeSelectionLength);
+        _editor.CaretOffset = Math.Min(caretIndex, safeLength);
     }
 
     private void AppendChunkToDocument(DocumentTab tab, string chunk)
@@ -541,9 +541,9 @@ public partial class MainWindow
                 document.EndUpdate();
             }
 
-            if (GetActiveTab()?.Id == tab.Id && !ReferenceEquals(EditorTextBox.Document, document))
+            if (GetActiveTab()?.Id == tab.Id && !ReferenceEquals(_editor.Document, document))
             {
-                EditorTextBox.Document = document;
+                _editor.SetDocument(document);
             }
         }
         finally
@@ -737,12 +737,12 @@ public partial class MainWindow
         if (tab is null)
             return;
 
-        tab.EditorDocument = EditorTextBox.Document;
+        tab.EditorDocument = _editor.Document;
         tab.LoadedCharacterCount = tab.EditorDocument?.TextLength ?? 0;
         tab.LoadedLineCount = tab.EditorDocument?.LineCount ?? 1;
-        tab.CaretIndex = EditorTextBox.CaretOffset;
-        tab.SelectionStart = EditorTextBox.SelectionStart;
-        tab.SelectionLength = EditorTextBox.SelectionLength;
+        tab.CaretIndex = _editor.CaretOffset;
+        tab.SelectionStart = _editor.SelectionStart;
+        tab.SelectionLength = _editor.SelectionLength;
 
         tab.LastActivatedUtc = DateTime.UtcNow;
     }
@@ -756,29 +756,29 @@ public partial class MainWindow
         var document = tab.EditorDocument ?? CreateDocumentFromTabText(tab);
         SetEditorDocumentFast(document);
 
-        EditorTextBox.IsReadOnly = false;
+        _editor.IsReadOnly = false;
 
-        var safeLen = EditorTextBox.Document?.TextLength ?? 0;
+        var safeLen = _editor.Document?.TextLength ?? 0;
         var caretIndex = Math.Min(tab.CaretIndex, safeLen);
         var selStart = Math.Min(tab.SelectionStart, safeLen);
         var selLen = Math.Min(tab.SelectionLength, safeLen - selStart);
-        EditorTextBox.Select(0, 0);
-        EditorTextBox.CaretOffset = Math.Min(caretIndex, Math.Min(safeLen, 1_024));
+        _editor.Select(0, 0);
+        _editor.CaretOffset = Math.Min(caretIndex, Math.Min(safeLen, 1_024));
         Dispatcher.BeginInvoke(
             () =>
             {
-                if (GetActiveTab()?.Id != tab.Id || !ReferenceEquals(EditorTextBox.Document, document))
+                if (GetActiveTab()?.Id != tab.Id || !ReferenceEquals(_editor.Document, document))
                 {
                     return;
                 }
 
-                var delayedSafeLen = EditorTextBox.Document?.TextLength ?? 0;
+                var delayedSafeLen = _editor.Document?.TextLength ?? 0;
                 var delayedCaretIndex = Math.Min(tab.CaretIndex, delayedSafeLen);
                 var delayedSelStart = Math.Min(tab.SelectionStart, delayedSafeLen);
                 var delayedSelLen = Math.Min(tab.SelectionLength, delayedSafeLen - delayedSelStart);
-                EditorTextBox.CaretOffset = delayedCaretIndex;
-                EditorTextBox.Select(delayedSelStart, delayedSelLen);
-                EditorTextBox.Focus();
+                _editor.CaretOffset = delayedCaretIndex;
+                _editor.Select(delayedSelStart, delayedSelLen);
+                _editor.Focus();
             },
             System.Windows.Threading.DispatcherPriority.Background
         );
@@ -795,7 +795,7 @@ public partial class MainWindow
     {
         var showMarkdownPreview = IsMarkdownPreviewActive(tab);
         MarkdownPreviewBrowser.Visibility = showMarkdownPreview ? Visibility.Visible : Visibility.Collapsed;
-        EditorTextBox.Visibility = showMarkdownPreview ? Visibility.Collapsed : Visibility.Visible;
+        _editor.Visibility = showMarkdownPreview ? Visibility.Collapsed : Visibility.Visible;
 
         if (showMarkdownPreview)
         {
@@ -810,7 +810,7 @@ public partial class MainWindow
         document.UndoStack.SizeLimit = 0;
         try
         {
-            EditorTextBox.Document = document;
+            _editor.SetDocument(document);
         }
         finally
         {
@@ -823,7 +823,7 @@ public partial class MainWindow
         _isInternalUpdate = true;
         try
         {
-            EditorTextBox.Document = document;
+            _editor.SetDocument(document);
         }
         finally
         {
@@ -923,10 +923,10 @@ public partial class MainWindow
 
     private void ApplySyntaxHighlighting(DocumentTab? tab)
     {
-        EditorTextBox.SyntaxHighlighting = null;
+        _editor.SyntaxHighlighting = null;
         _syntaxHighlightColorizer.Language = ResolveSyntaxLanguage(tab);
         _syntaxHighlightColorizer.IsDarkTheme = _themeMode == AppThemeMode.Dark;
-        EditorTextBox.TextArea.TextView.Redraw();
+        _editor.Redraw();
     }
 
     private static SyntaxLanguage ResolveSyntaxLanguage(DocumentTab? tab)
@@ -994,7 +994,7 @@ public partial class MainWindow
 
         if (index == _activeTabIndex)
         {
-            EditorTextBox.Focus();
+            _editor.Focus();
             return;
         }
 

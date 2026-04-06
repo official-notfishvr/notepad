@@ -29,10 +29,10 @@ public partial class MainWindow
         _editorFontStyle = string.Equals(_appSettings.EditorFontStyle, "Italic", StringComparison.OrdinalIgnoreCase) ? FontStyles.Italic : FontStyles.Normal;
         _editorFontWeight = string.Equals(_appSettings.EditorFontWeight, "Bold", StringComparison.OrdinalIgnoreCase) ? FontWeights.Bold : FontWeights.Normal;
 
-        EditorTextBox.FontFamily = _editorFontFamily;
-        EditorTextBox.FontStyle = _editorFontStyle;
-        EditorTextBox.FontWeight = _editorFontWeight;
-        EditorTextBox.FontSize = Math.Clamp(_appSettings.EditorFontSize, 6, 72);
+        _editor.FontFamily = _editorFontFamily;
+        _editor.FontStyle = _editorFontStyle;
+        _editor.FontWeight = _editorFontWeight;
+        _editor.FontSize = Math.Clamp(_appSettings.EditorFontSize, 6, 72);
 
         var tab = GetActiveTab();
         if (tab is not null)
@@ -51,7 +51,7 @@ public partial class MainWindow
         _appSettings.EditorFontFamily = _editorFontFamily.Source;
         _appSettings.EditorFontStyle = _editorFontStyle == FontStyles.Italic ? "Italic" : "Normal";
         _appSettings.EditorFontWeight = _editorFontWeight == FontWeights.Bold ? "Bold" : "Normal";
-        _appSettings.EditorFontSize = EditorTextBox.FontSize;
+        _appSettings.EditorFontSize = _editor.FontSize;
         _appSettings.RecentFiles = _recentFiles.ToList();
 
         AppSettingsStore.Save(_appSettings);
@@ -77,10 +77,10 @@ public partial class MainWindow
         _editorFontStyle = dialog.SelectedFontStyle;
         _editorFontWeight = dialog.SelectedFontWeight;
 
-        EditorTextBox.FontFamily = _editorFontFamily;
-        EditorTextBox.FontStyle = _editorFontStyle;
-        EditorTextBox.FontWeight = _editorFontWeight;
-        EditorTextBox.FontSize = dialog.SelectedFontSize;
+        _editor.FontFamily = _editorFontFamily;
+        _editor.FontStyle = _editorFontStyle;
+        _editor.FontWeight = _editorFontWeight;
+        _editor.FontSize = dialog.SelectedFontSize;
 
         _statusBarVisible = _appSettings.StatusBarVisible;
         StatusChrome.Visibility = _statusBarVisible ? Visibility.Visible : Visibility.Collapsed;
@@ -134,18 +134,18 @@ public partial class MainWindow
         }
         else
         {
-            var document = EditorTextBox.Document;
+            var document = _editor.Document;
             var documentLength = document?.TextLength ?? 0;
-            var caretOffset = Math.Clamp(EditorTextBox.CaretOffset, 0, documentLength);
-            var line = document is null ? null : document.GetLineByOffset(documentLength == 0 ? 0 : caretOffset);
+            var caretOffset = Math.Clamp(_editor.CaretOffset, 0, documentLength);
+            var line = _editor.GetLineByOffset(documentLength == 0 ? 0 : caretOffset);
             var lineIndex = Math.Max(0, (line?.LineNumber ?? 1) - 1);
-            var column = line is null ? 1 : caretOffset - line.Offset + 1;
+            var column = line is null ? 1 : caretOffset - line.Value.Offset + 1;
 
             CaretText.Text = $"Ln {Math.Max(1, lineIndex + 1):N0}, Col {Math.Max(1, column):N0}";
 
-            if (EditorTextBox.SelectionLength > 0)
+            if (_editor.SelectionLength > 0)
             {
-                SelectionText.Text = $"{EditorTextBox.SelectionLength:N0} characters selected";
+                SelectionText.Text = $"{_editor.SelectionLength:N0} characters selected";
                 SelectionText.Visibility = Visibility.Visible;
                 SelectionDivider.Visibility = Visibility.Visible;
             }
@@ -156,7 +156,7 @@ public partial class MainWindow
             }
         }
 
-        CharacterCountText.Text = $"{tab?.LoadedCharacterCount ?? (EditorTextBox.Document?.TextLength ?? 0):N0} chars";
+        CharacterCountText.Text = $"{tab?.LoadedCharacterCount ?? (_editor.Document?.TextLength ?? 0):N0} chars";
         LineEndingText.Text = tab?.CanShowEncodingAndLineEndings == true ? tab.LineEndingLabel : "Windows (CRLF)";
         EncodingText.Text = tab?.CanShowEncodingAndLineEndings == true ? tab.EncodingLabel : "UTF-8";
 
@@ -168,8 +168,8 @@ public partial class MainWindow
         var tab = GetActiveTab();
         var enabled = tab?.WordWrapEnabled == true;
 
-        EditorTextBox.WordWrap = enabled;
-        EditorTextBox.HorizontalScrollBarVisibility = enabled ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        _editor.WordWrap = enabled;
+        _editor.HorizontalScrollBarVisibility = enabled ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
     }
 
     private void UpdateWindowButtons()
@@ -179,31 +179,31 @@ public partial class MainWindow
 
     private void UpdateZoomStatus()
     {
-        var percent = EditorTextBox.FontSize / DefaultEditorFontSize * 100;
+        var percent = _editor.FontSize / DefaultEditorFontSize * 100;
         ZoomText.Text = $"{percent:N0}%";
     }
 
     private void ZoomBy(int delta)
     {
-        var nextSize = Math.Clamp(EditorTextBox.FontSize + delta, 6, 72);
-        EditorTextBox.FontSize = nextSize;
+        var nextSize = Math.Clamp(_editor.FontSize + delta, 6, 72);
+        _editor.FontSize = nextSize;
         UpdateZoomStatus();
         SaveSettings();
     }
 
     private void InsertTextAtCaret(string value)
     {
-        var index = EditorTextBox.CaretOffset;
-        EditorTextBox.Document.Insert(index, value);
-        EditorTextBox.CaretOffset = index + value.Length;
+        var index = _editor.CaretOffset;
+        _editor.InsertText(index, value);
+        _editor.CaretOffset = index + value.Length;
     }
 
     private void ReplaceTextRange(int start, int length, string replacement)
     {
-        EditorTextBox.Document.Replace(start, length, replacement);
-        EditorTextBox.Select(start, replacement.Length);
-        EditorTextBox.CaretOffset = start + replacement.Length;
-        EditorTextBox.Focus();
+        _editor.ReplaceText(start, length, replacement);
+        _editor.Select(start, replacement.Length);
+        _editor.CaretOffset = start + replacement.Length;
+        _editor.Focus();
     }
 
     private void CloseMenus()
@@ -290,7 +290,7 @@ public partial class MainWindow
             ApplySyntaxHighlighting(activeTab);
         }
         RenderTabs();
-        EditorTextBox.TextArea.TextView.Redraw();
+        _editor.Redraw();
         RefreshMarkdownPreview(activeTab);
     }
 
@@ -416,10 +416,10 @@ public partial class MainWindow
         var printDialog = new PrintDialog();
         if (printDialog.ShowDialog() == true)
         {
-            var document = new FlowDocument(new Paragraph(new Run(EditorTextBox.Text)))
+            var document = new FlowDocument(new Paragraph(new Run(_editor.Text)))
             {
-                FontFamily = EditorTextBox.FontFamily,
-                FontSize = EditorTextBox.FontSize,
+                FontFamily = _editor.FontFamily,
+                FontSize = _editor.FontSize,
                 PageWidth = printDialog.PrintableAreaWidth,
                 PagePadding = new Thickness(60),
                 ColumnGap = 0,
@@ -434,43 +434,43 @@ public partial class MainWindow
     private void UndoMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        EditorTextBox.Undo();
+        _editor.Undo();
     }
 
     private void RedoMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        EditorTextBox.Redo();
+        _editor.Redo();
     }
 
     private void CutMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        EditorTextBox.Cut();
+        _editor.Cut();
     }
 
     private void CopyMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        EditorTextBox.Copy();
+        _editor.Copy();
     }
 
     private void PasteMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        EditorTextBox.Paste();
+        _editor.Paste();
     }
 
     private void DeleteMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        EditorTextBox.SelectedText = string.Empty;
+        _editor.SelectedText = string.Empty;
     }
 
     private void SearchWithBingMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        var query = string.IsNullOrWhiteSpace(EditorTextBox.SelectedText) ? EditorTextBox.TextArea.Selection.GetText() : EditorTextBox.SelectedText;
+        var query = _editor.SelectedText;
         if (string.IsNullOrWhiteSpace(query))
         {
             return;
@@ -488,7 +488,7 @@ public partial class MainWindow
     private void SelectAllMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         EditMenuPopup.IsOpen = false;
-        EditorTextBox.SelectAll();
+        _editor.SelectAll();
     }
 
     private void WordWrapMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -520,7 +520,7 @@ public partial class MainWindow
     private void RestoreZoomMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
         ViewMenuPopup.IsOpen = false;
-        EditorTextBox.FontSize = DefaultEditorFontSize;
+        _editor.FontSize = DefaultEditorFontSize;
         UpdateZoomStatus();
         SaveSettings();
     }
@@ -574,7 +574,7 @@ public partial class MainWindow
         }
         else
         {
-            EditorTextBox.Focus();
+            _editor.Focus();
         }
     }
 
@@ -588,15 +588,15 @@ public partial class MainWindow
     {
         EditMenuPopup.IsOpen = false;
 
-        var dialog = new FontPickerDialog(EditorTextBox.FontFamily, EditorTextBox.FontStyle, EditorTextBox.FontWeight, EditorTextBox.FontSize) { Owner = this };
+        var dialog = new FontPickerDialog(_editor.FontFamily, _editor.FontStyle, _editor.FontWeight, _editor.FontSize) { Owner = this };
 
         if (dialog.ShowDialog() == true)
         {
-            EditorTextBox.FontFamily = dialog.SelectedFontFamily;
-            EditorTextBox.FontStyle = dialog.SelectedFontStyle;
-            EditorTextBox.FontWeight = dialog.SelectedFontWeight;
-            EditorTextBox.FontSize = dialog.SelectedFontSize;
-            EditorTextBox.TextArea.TextView.InvalidateVisual();
+            _editor.FontFamily = dialog.SelectedFontFamily;
+            _editor.FontStyle = dialog.SelectedFontStyle;
+            _editor.FontWeight = dialog.SelectedFontWeight;
+            _editor.FontSize = dialog.SelectedFontSize;
+            _editor.InvalidateVisual();
             _editorFontFamily = dialog.SelectedFontFamily;
             _editorFontStyle = dialog.SelectedFontStyle;
             _editorFontWeight = dialog.SelectedFontWeight;
@@ -732,34 +732,32 @@ public partial class MainWindow
 
     private void EditorTextBox_OnPreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
-        var position = EditorTextBox.GetPositionFromPoint(e.GetPosition(EditorTextBox));
-        if (!position.HasValue || EditorTextBox.Document is null)
+        if (!_editor.TryGetOffsetFromPoint(e.GetPosition(_editor.View), out var offset))
         {
             return;
         }
 
-        var offset = EditorTextBox.Document.GetOffset(position.Value.Location);
-        if (offset < EditorTextBox.SelectionStart || offset > EditorTextBox.SelectionStart + EditorTextBox.SelectionLength)
+        if (offset < _editor.SelectionStart || offset > _editor.SelectionStart + _editor.SelectionLength)
         {
-            EditorTextBox.Select(offset, 0);
+            _editor.Select(offset, 0);
         }
 
-        EditorTextBox.CaretOffset = offset;
-        EditorTextBox.Focus();
+        _editor.CaretOffset = offset;
+        _editor.Focus();
     }
 
     private void EditorTextBox_OnContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
-        EditorTextBox.ContextMenu = CreateEditorContextMenu();
+        _editor.ContextMenu = CreateEditorContextMenu();
     }
 
     private ContextMenu CreateEditorContextMenu()
     {
         var menu = new ContextMenu { Style = (Style)FindResource("TabContextMenuStyle") };
-        var document = EditorTextBox.Document;
+        var document = _editor.Document;
         var hasSuggestionItems = false;
 
-        if (document is not null && _spellCheckColorizer.IsEnabled && _spellCheckColorizer.TryGetSpellingIssue(document, EditorTextBox.CaretOffset, out var issue))
+        if (document is not null && _spellCheckColorizer.IsEnabled && _spellCheckColorizer.TryGetSpellingIssue(document, _editor.CaretOffset, out var issue))
         {
             foreach (var suggestion in issue.Suggestions.Distinct(StringComparer.OrdinalIgnoreCase).Take(6))
             {
@@ -785,7 +783,7 @@ public partial class MainWindow
             ignoreItem.Click += (_, _) =>
             {
                 _spellCheckColorizer.IgnoreWord(issue.Word);
-                EditorTextBox.TextArea.TextView.Redraw();
+                _editor.Redraw();
             };
             menu.Items.Add(ignoreItem);
 
@@ -793,33 +791,33 @@ public partial class MainWindow
             addItem.Click += (_, _) =>
             {
                 _spellCheckColorizer.AddWordToDictionary(issue.Word);
-                EditorTextBox.TextArea.TextView.Redraw();
+                _editor.Redraw();
             };
             menu.Items.Add(addItem);
             menu.Items.Add(new Separator { Style = (Style)FindResource("TabContextSeparatorStyle") });
         }
 
-        menu.Items.Add(CreateEditorMenuItem("Cut", () => EditorTextBox.Cut(), CanCutEditorSelection()));
-        menu.Items.Add(CreateEditorMenuItem("Copy", () => EditorTextBox.Copy(), CanCopyEditorSelection()));
-        menu.Items.Add(CreateEditorMenuItem("Paste", () => EditorTextBox.Paste(), CanPasteIntoEditor()));
+        menu.Items.Add(CreateEditorMenuItem("Cut", () => _editor.Cut(), CanCutEditorSelection()));
+        menu.Items.Add(CreateEditorMenuItem("Copy", () => _editor.Copy(), CanCopyEditorSelection()));
+        menu.Items.Add(CreateEditorMenuItem("Paste", () => _editor.Paste(), CanPasteIntoEditor()));
         menu.Items.Add(new Separator { Style = (Style)FindResource("TabContextSeparatorStyle") });
-        menu.Items.Add(CreateEditorMenuItem("Select all", () => EditorTextBox.SelectAll(), true));
+        menu.Items.Add(CreateEditorMenuItem("Select all", () => _editor.SelectAll(), true));
         return menu;
     }
 
     private bool CanCutEditorSelection()
     {
-        return !EditorTextBox.IsReadOnly && EditorTextBox.SelectionLength > 0;
+        return !_editor.IsReadOnly && _editor.SelectionLength > 0;
     }
 
     private bool CanCopyEditorSelection()
     {
-        return EditorTextBox.SelectionLength > 0;
+        return _editor.SelectionLength > 0;
     }
 
     private bool CanPasteIntoEditor()
     {
-        if (EditorTextBox.IsReadOnly)
+        if (_editor.IsReadOnly)
         {
             return false;
         }
@@ -990,7 +988,7 @@ public partial class MainWindow
         UpdateFindPanelControls();
         ResetFindHighlight();
         RemoveHighlightAdorner();
-        EditorTextBox.Focus();
+        _editor.Focus();
     }
 
     private void FindPanelOptionsButton_OnClick(object sender, RoutedEventArgs e)

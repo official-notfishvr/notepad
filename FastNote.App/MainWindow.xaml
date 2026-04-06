@@ -143,12 +143,7 @@
                     </Grid.RowDefinitions>
                     <Grid Grid.Row="0" AllowDrop="True" PreviewDrop="Window_OnDrop" PreviewDragOver="Window_OnDragOver">
                         <WebBrowser x:Name="MarkdownPreviewBrowser" Visibility="Collapsed" AllowDrop="True" PreviewDrop="Window_OnDrop" PreviewDragOver="Window_OnDragOver" />
-                        <Grid
-                            x:Name="EditorHost"
-                            AllowDrop="True"
-                            PreviewDrop="Window_OnDrop"
-                            PreviewDragOver="Window_OnDragOver"
-                        />
+                        <Grid x:Name="EditorHost" AllowDrop="True" PreviewDrop="Window_OnDrop" PreviewDragOver="Window_OnDragOver" />
                         <Border x:Name="StreamingBadge" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,12,18,0" Padding="10,4" Background="{DynamicResource AccentSoftBrush}" CornerRadius="12" Visibility="Collapsed">
                             <TextBlock x:Name="LoadingText" Foreground="{DynamicResource AccentBrush}" FontSize="11" Text="Loading…" />
                         </Border>

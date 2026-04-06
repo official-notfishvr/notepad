@@ -56,7 +56,6 @@ public partial class MainWindow
         public bool IsMarkdownPreviewEnabled { get; set; }
         public string? MarkdownPreviewCacheKey { get; set; }
         public DocumentKind Kind { get; set; } = DocumentKind.PlainText;
-        public FileDocument? CoreDocument { get; set; }
 
         public bool IsMarkdownDocument => Kind == DocumentKind.Markdown;
         public bool CanShowFormattingToolbar => IsMarkdownDocument;

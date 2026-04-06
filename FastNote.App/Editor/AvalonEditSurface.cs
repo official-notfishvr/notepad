@@ -50,22 +50,74 @@ public sealed class AvalonEditSurface : IEditorSurface
 
     public FrameworkElement View => _editor;
     public TextDocument? Document => _editor.Document;
-    public string Text { get => _editor.Text; set => _editor.Text = value; }
-    public string SelectedText { get => _editor.SelectedText; set => _editor.SelectedText = value; }
+    public string Text
+    {
+        get => _editor.Text;
+        set => _editor.Text = value;
+    }
+    public string SelectedText
+    {
+        get => _editor.SelectedText;
+        set => _editor.SelectedText = value;
+    }
     public int SelectionStart => _editor.SelectionStart;
     public int SelectionLength => _editor.SelectionLength;
-    public int CaretOffset { get => _editor.CaretOffset; set => _editor.CaretOffset = value; }
-    public bool IsReadOnly { get => _editor.IsReadOnly; set => _editor.IsReadOnly = value; }
+    public int CaretOffset
+    {
+        get => _editor.CaretOffset;
+        set => _editor.CaretOffset = value;
+    }
+    public bool IsReadOnly
+    {
+        get => _editor.IsReadOnly;
+        set => _editor.IsReadOnly = value;
+    }
     public bool IsKeyboardFocusWithin => _editor.IsKeyboardFocusWithin;
-    public bool WordWrap { get => _editor.WordWrap; set => _editor.WordWrap = value; }
-    public ScrollBarVisibility HorizontalScrollBarVisibility { get => _editor.HorizontalScrollBarVisibility; set => _editor.HorizontalScrollBarVisibility = value; }
-    public FontFamily FontFamily { get => _editor.FontFamily; set => _editor.FontFamily = value; }
-    public FontStyle FontStyle { get => _editor.FontStyle; set => _editor.FontStyle = value; }
-    public FontWeight FontWeight { get => _editor.FontWeight; set => _editor.FontWeight = value; }
-    public double FontSize { get => _editor.FontSize; set => _editor.FontSize = value; }
-    public Visibility Visibility { get => _editor.Visibility; set => _editor.Visibility = value; }
-    public object? SyntaxHighlighting { get => _editor.SyntaxHighlighting; set => _editor.SyntaxHighlighting = value as ICSharpCode.AvalonEdit.Highlighting.IHighlightingDefinition; }
-    public ContextMenu? ContextMenu { get => _editor.ContextMenu; set => _editor.ContextMenu = value; }
+    public bool WordWrap
+    {
+        get => _editor.WordWrap;
+        set => _editor.WordWrap = value;
+    }
+    public ScrollBarVisibility HorizontalScrollBarVisibility
+    {
+        get => _editor.HorizontalScrollBarVisibility;
+        set => _editor.HorizontalScrollBarVisibility = value;
+    }
+    public FontFamily FontFamily
+    {
+        get => _editor.FontFamily;
+        set => _editor.FontFamily = value;
+    }
+    public FontStyle FontStyle
+    {
+        get => _editor.FontStyle;
+        set => _editor.FontStyle = value;
+    }
+    public FontWeight FontWeight
+    {
+        get => _editor.FontWeight;
+        set => _editor.FontWeight = value;
+    }
+    public double FontSize
+    {
+        get => _editor.FontSize;
+        set => _editor.FontSize = value;
+    }
+    public Visibility Visibility
+    {
+        get => _editor.Visibility;
+        set => _editor.Visibility = value;
+    }
+    public object? SyntaxHighlighting
+    {
+        get => _editor.SyntaxHighlighting;
+        set => _editor.SyntaxHighlighting = value as ICSharpCode.AvalonEdit.Highlighting.IHighlightingDefinition;
+    }
+    public ContextMenu? ContextMenu
+    {
+        get => _editor.ContextMenu;
+        set => _editor.ContextMenu = value;
+    }
 
     public void SetDocument(TextDocument document) => _editor.Document = document;
 

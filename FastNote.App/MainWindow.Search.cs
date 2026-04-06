@@ -278,53 +278,6 @@ public partial class MainWindow
         return options;
     }
 
-    private List<(int Start, int Length)> FindAllMatches(string text, string query)
-    {
-        var results = new List<(int, int)>();
-        if (string.IsNullOrEmpty(query))
-        {
-            return results;
-        }
-
-        try
-        {
-            if (UseRegexCheckBox.IsChecked == true)
-            {
-                var regex = new Regex(query, RegexOptions.Multiline);
-                foreach (Match m in regex.Matches(text))
-                {
-                    results.Add((m.Index, m.Length));
-                }
-            }
-            else
-            {
-                var comparison = MatchCaseCheckBox.IsChecked == true ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-                var wholeWord = WholeWordCheckBox.IsChecked == true;
-                var pos = 0;
-                while (pos < text.Length)
-                {
-                    var idx = text.IndexOf(query, pos, comparison);
-                    if (idx < 0)
-                    {
-                        break;
-                    }
-
-                    var valid = !wholeWord || ((idx == 0 || !char.IsLetterOrDigit(text[idx - 1])) && (idx + query.Length >= text.Length || !char.IsLetterOrDigit(text[idx + query.Length])));
-
-                    if (valid)
-                    {
-                        results.Add((idx, query.Length));
-                    }
-
-                    pos = idx + Math.Max(1, query.Length);
-                }
-            }
-        }
-        catch { }
-
-        return results;
-    }
-
     private void RefreshHighlightAll()
     {
         ApplyHighlightAllState();
@@ -517,10 +470,6 @@ public partial class MainWindow
         RemoveHighlightAdorner();
         UpdateMatchCountLabel();
     }
-
-    private void FindNextButton_OnClick(object sender, RoutedEventArgs e) => FindNextInternal();
-
-    private void FindPreviousButton_OnClick(object sender, RoutedEventArgs e) => FindPreviousInternal();
 
     private void ReplaceOneButton_OnClick(object sender, RoutedEventArgs e)
     {

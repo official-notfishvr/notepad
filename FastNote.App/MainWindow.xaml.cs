@@ -80,7 +80,7 @@ public partial class MainWindow : Window
             BeginMatchCountUpdate();
         };
         _sessionSaveTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(5) };
-        _sessionSaveTimer.Tick += (_, _) => SaveSessionSnapshot();
+        _sessionSaveTimer.Tick += (_, _) => FlushPendingSessionSnapshot();
 
         ApplySavedSettings();
         if (!_restorePreviousSessionOnStartup || !TryRestorePreviousSession())

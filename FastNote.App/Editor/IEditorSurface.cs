@@ -22,7 +22,6 @@ public interface IEditorSurface
     int SelectionStart { get; }
     int SelectionLength { get; }
     int CaretOffset { get; set; }
-    bool IsReadOnly { get; set; }
     bool IsKeyboardFocusWithin { get; }
     bool WordWrap { get; set; }
     ScrollBarVisibility HorizontalScrollBarVisibility { get; set; }

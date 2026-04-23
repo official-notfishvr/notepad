@@ -513,7 +513,6 @@ public partial class MainWindow
         if (GetActiveTab()?.Id == tab.Id)
         {
             SetEditorDocumentFast(document);
-            _editor.IsReadOnly = true;
             UpdateEditorSurface(tab);
             ConfigureWordWrap();
             UpdateLoadingUi();
@@ -625,7 +624,6 @@ public partial class MainWindow
             SetEditorDocumentFast(document);
         }
 
-        _editor.IsReadOnly = false;
         ApplySyntaxHighlighting(tab);
         UpdateEditorSurface(tab);
         ConfigureWordWrap();
@@ -928,7 +926,6 @@ public partial class MainWindow
 
         var document = tab.EditorDocument ?? CreateDocumentFromTabText(tab);
         SetEditorDocumentFast(document);
-        _editor.IsReadOnly = tab.IsLoading;
 
         var safeLength = _editor.Document?.TextLength ?? 0;
         var caretIndex = Math.Min(tab.CaretIndex, safeLength);
@@ -1014,7 +1011,6 @@ public partial class MainWindow
             return;
         }
 
-        _editor.IsReadOnly = tab.IsLoading;
         ApplySyntaxHighlighting(tab);
         UpdateEditorSurface(tab);
         UpdateLoadingUi();

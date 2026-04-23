@@ -807,7 +807,7 @@ public partial class MainWindow
 
     private bool CanCutEditorSelection()
     {
-        return !_editor.IsReadOnly && _editor.SelectionLength > 0;
+        return _editor.SelectionLength > 0;
     }
 
     private bool CanCopyEditorSelection()
@@ -817,11 +817,6 @@ public partial class MainWindow
 
     private bool CanPasteIntoEditor()
     {
-        if (_editor.IsReadOnly)
-        {
-            return false;
-        }
-
         try
         {
             return Clipboard.ContainsText();

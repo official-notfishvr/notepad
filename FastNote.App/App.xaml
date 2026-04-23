@@ -466,7 +466,7 @@
                                 Style="{StaticResource ComboBoxToggleButtonStyle}"
                             />
                             <ContentPresenter x:Name="ContentSite" Margin="{TemplateBinding Padding}" HorizontalAlignment="Left" VerticalAlignment="Center" Content="{TemplateBinding SelectionBoxItem}" ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" IsHitTestVisible="False" />
-                            <TextBox x:Name="PART_EditableTextBox" Margin="{TemplateBinding Padding}" Background="Transparent" Foreground="{TemplateBinding Foreground}" Focusable="True" IsReadOnly="{TemplateBinding IsReadOnly}" Visibility="Hidden" />
+                            <TextBox x:Name="PART_EditableTextBox" Margin="{TemplateBinding Padding}" Background="Transparent" Foreground="{TemplateBinding Foreground}" Focusable="True" Visibility="Hidden" />
                             <Popup x:Name="PART_Popup" AllowsTransparency="True" Focusable="False" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" PopupAnimation="Slide">
                                 <Border Margin="0,4,0,0" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="{TemplateBinding MaxDropDownHeight}" Style="{StaticResource PopupBorderStyle}">
                                     <ScrollViewer CanContentScroll="True" SnapsToDevicePixels="True">

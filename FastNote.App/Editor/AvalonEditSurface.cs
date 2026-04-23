@@ -67,11 +67,6 @@ public sealed class AvalonEditSurface : IEditorSurface
         get => _editor.CaretOffset;
         set => _editor.CaretOffset = value;
     }
-    public bool IsReadOnly
-    {
-        get => _editor.IsReadOnly;
-        set => _editor.IsReadOnly = value;
-    }
     public bool IsKeyboardFocusWithin => _editor.IsKeyboardFocusWithin;
     public bool WordWrap
     {
